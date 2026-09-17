@@ -1176,6 +1176,25 @@ do
 	Rayfield.Main.Search.Shadow.Image = customAssets["2"]
 	Rayfield.Notifications.Template.Icon.Image = customAssets["15"]
 	Rayfield.Notifications.Template.Shadow.Image = customAssets["16"]
+
+	local secTemplate = Rayfield.Main.Elements.Template:FindFirstChild("SectionTitle")
+	if secTemplate then
+		secTemplate.Size = UDim2.new(1, -10, 0, 24)
+		secTemplate.ClipsDescendants = false
+		if secTemplate:FindFirstChild("Title") then
+			secTemplate.Title.Size = UDim2.new(1, -15, 1, 0)
+			secTemplate.Title.Position = UDim2.new(0, 15, 0, 0)
+			secTemplate.Title.TextScaled = false
+			secTemplate.Title.TextSize = 14
+			secTemplate.Title.TextXAlignment = Enum.TextXAlignment.Left
+			secTemplate.Title.TextYAlignment = Enum.TextYAlignment.Center
+			secTemplate.Title.ClipsDescendants = false
+		end
+	end
+	local secSpacing = Rayfield.Main.Elements.Template:FindFirstChild("SectionSpacing")
+	if secSpacing then
+		secSpacing.Size = UDim2.new(1, 0, 0, 8)
+	end
 		if type(writefile) == "function" and type(isfile) == "function" then
 		pcall(function()
 			ensureFolder(RayfieldFolder)
@@ -2044,7 +2063,20 @@ local function updateSetting(category: string, setting: string, value: any)
 	saveSettings()
 end
 
-local function createSettings(window)
+local function createSettings(window, winSettings)
+	winSettings = winSettings or {}
+	local initialThemeName = "Default"
+	if winSettings.Theme then
+		if type(winSettings.Theme) == "string" and RayfieldLibrary.Theme[winSettings.Theme] then
+			initialThemeName = winSettings.Theme
+		elseif type(winSettings.Theme) == "table" and winSettings.Theme.Base and RayfieldLibrary.Theme[winSettings.Theme.Base] then
+			initialThemeName = winSettings.Theme.Base
+		end
+	end
+
+	local defaultWidth = winSettings.Width or currentSavedWidth or 500
+	local defaultHeight = winSettings.Height or currentSavedHeight or 475
+
 	local newTab = window:CreateTab("Settings", 0, true)
 
 	if TabList["Settings"] then
@@ -2090,12 +2122,12 @@ local function createSettings(window)
 	globalHeightSlider = heightSlider
 
 	newTab:CreateButton({
-		Name = "Reset to Default Size",
+		Name = "Reset to Default Size (" .. tostring(defaultWidth) .. "x" .. tostring(defaultHeight) .. ")",
 		Ext = true,
 		Callback = function()
-			widthSlider:Set(500)
-			heightSlider:Set(475)
-			applySize(500, 475, true)
+			widthSlider:Set(defaultWidth)
+			heightSlider:Set(defaultHeight)
+			applySize(defaultWidth, defaultHeight, true)
 		end
 	})
 
@@ -2157,10 +2189,21 @@ local function createSettings(window)
 		"Ubuntu"
 	}
 
+	local initialFontName = "Gotham"
+	if winSettings.Font then
+		if type(winSettings.Font) == "string" and table.find(fontList, winSettings.Font) then
+			initialFontName = winSettings.Font
+		elseif typeof(winSettings.Font) == "EnumItem" and table.find(fontList, winSettings.Font.Name) then
+			initialFontName = winSettings.Font.Name
+		end
+	elseif SelectedTheme and SelectedTheme.Font and typeof(SelectedTheme.Font) == "EnumItem" then
+		initialFontName = SelectedTheme.Font.Name
+	end
+
 	local fontDropdown = newTab:CreateDropdown({
 		Name = "UI Font Family",
 		Options = fontList,
-		CurrentOption = {"Gotham"},
+		CurrentOption = {initialFontName},
 		MultipleOptions = false,
 		Ext = true,
 		Callback = function(Option)
@@ -2186,7 +2229,7 @@ local function createSettings(window)
 	local themeDropdown = newTab:CreateDropdown({
 		Name = "Preset Themes",
 		Options = themeNames,
-		CurrentOption = {"Default"},
+		CurrentOption = {initialThemeName},
 		MultipleOptions = false,
 		Ext = true,
 		Callback = function(Option)
@@ -3371,20 +3414,33 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			if SDone then
 				local SectionSpace = Elements.Template.SectionSpacing:Clone()
+				SectionSpace.Size = UDim2.new(1, 0, 0, 8)
 				SectionSpace.Visible = true
 				SectionSpace.Parent = TabPage
 			end
 
 			local Section = Elements.Template.SectionTitle:Clone()
-			Section.Title.Text = SectionName
+			Section.Size = UDim2.new(1, -10, 0, 24)
+			Section.ClipsDescendants = false
+			if Section:FindFirstChild("Title") then
+				Section.Title.Size = UDim2.new(1, -15, 1, 0)
+				Section.Title.Position = UDim2.new(0, 15, 0, 0)
+				Section.Title.Text = SectionName
+				Section.Title.TextScaled = false
+				Section.Title.TextSize = 14
+				Section.Title.TextXAlignment = Enum.TextXAlignment.Left
+				Section.Title.TextYAlignment = Enum.TextYAlignment.Center
+				Section.Title.ClipsDescendants = false
+				Section.Title.TextTransparency = 1
+				TweenService:Create(Section.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0.4}):Play()
+			end
 			Section.Visible = true
 			Section.Parent = TabPage
 
-			Section.Title.TextTransparency = 1
-			TweenService:Create(Section.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0.4}):Play()
-
 			function SectionValue:Set(NewSection)
-				Section.Title.Text = NewSection
+				if Section:FindFirstChild("Title") then
+					Section.Title.Text = NewSection
+				end
 			end
 
 			SDone = true
@@ -4490,7 +4546,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 	end
 
 	local success, result = pcall(function()
-		createSettings(Window)
+		createSettings(Window, Settings)
 	end)
 
 	if not success then end
@@ -4591,10 +4647,21 @@ Main.Search.Input:GetPropertyChangedSignal('Text'):Connect(function()
 	if #Main.Search.Input.Text > 0 then
 		if not Elements.UIPageLayout.CurrentPage:FindFirstChild('SearchTitle-fsefsefesfsefesfesfThanks') then 
 			local searchTitle = Elements.Template.SectionTitle:Clone()
+			searchTitle.Size = UDim2.new(1, -10, 0, 24)
+			searchTitle.ClipsDescendants = false
+			if searchTitle:FindFirstChild("Title") then
+				searchTitle.Title.Size = UDim2.new(1, -15, 1, 0)
+				searchTitle.Title.Position = UDim2.new(0, 15, 0, 0)
+				searchTitle.Title.TextScaled = false
+				searchTitle.Title.TextSize = 14
+				searchTitle.Title.Text = "Results from '"..Elements.UIPageLayout.CurrentPage.Name.."'"
+				searchTitle.Title.TextXAlignment = Enum.TextXAlignment.Left
+				searchTitle.Title.TextYAlignment = Enum.TextYAlignment.Center
+				searchTitle.Title.ClipsDescendants = false
+			end
 			searchTitle.Parent = Elements.UIPageLayout.CurrentPage
 			searchTitle.Name = 'SearchTitle-fsefsefesfsefesfesfThanks'
 			searchTitle.LayoutOrder = -100
-			searchTitle.Title.Text = "Results from '"..Elements.UIPageLayout.CurrentPage.Name.."'"
 			searchTitle.Visible = true
 		end
 	else
