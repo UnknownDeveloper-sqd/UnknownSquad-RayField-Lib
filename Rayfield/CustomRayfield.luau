@@ -1,9 +1,6 @@
 
-
 if debugX then
 end
-
-
 
 local function getService(name)
 	local service = game:GetService(name)
@@ -151,7 +148,6 @@ if not prompt and not useStudio then
 	}
 end
 
-
 local function callSafely(func, ...)
 	if func then
 		local success, result = pcall(func, ...)
@@ -196,7 +192,6 @@ local function loadSettings()
 			file = {}
 		end
 
-
 		if not settingsCreated then
 			return
 		end
@@ -224,7 +219,7 @@ local function loadSettings()
 		settingsInitialized = true
 	end)
 
-	if not success then 
+	if not success then
 		if writefile then
 		end
 	end
@@ -437,7 +432,7 @@ local RayfieldLibrary = {
 			SecondaryElementStroke = Color3.fromRGB(210, 210, 210),
 
 			SliderBackground = Color3.fromRGB(150, 180, 220),
-			SliderProgress = Color3.fromRGB(100, 150, 200), 
+			SliderProgress = Color3.fromRGB(100, 150, 200),
 			SliderStroke = Color3.fromRGB(120, 170, 220),
 
 			ToggleBackground = Color3.fromRGB(220, 220, 220),
@@ -516,7 +511,7 @@ local RayfieldLibrary = {
 
 			ElementBackground = Color3.fromRGB(225, 240, 225),
 			ElementBackgroundHover = Color3.fromRGB(210, 225, 210),
-			SecondaryElementBackground = Color3.fromRGB(235, 245, 235), 
+			SecondaryElementBackground = Color3.fromRGB(235, 245, 235),
 			ElementStroke = Color3.fromRGB(180, 200, 180),
 			SecondaryElementStroke = Color3.fromRGB(180, 200, 180),
 
@@ -558,7 +553,7 @@ local RayfieldLibrary = {
 
 			ElementBackground = Color3.fromRGB(255, 235, 240),
 			ElementBackgroundHover = Color3.fromRGB(245, 220, 230),
-			SecondaryElementBackground = Color3.fromRGB(255, 235, 240), 
+			SecondaryElementBackground = Color3.fromRGB(255, 235, 240),
 			ElementStroke = Color3.fromRGB(230, 200, 210),
 			SecondaryElementStroke = Color3.fromRGB(230, 200, 210),
 
@@ -600,7 +595,7 @@ local RayfieldLibrary = {
 
 			ElementBackground = Color3.fromRGB(30, 35, 40),
 			ElementBackgroundHover = Color3.fromRGB(40, 45, 50),
-			SecondaryElementBackground = Color3.fromRGB(35, 40, 45), 
+			SecondaryElementBackground = Color3.fromRGB(35, 40, 45),
 			ElementStroke = Color3.fromRGB(45, 50, 60),
 			SecondaryElementStroke = Color3.fromRGB(40, 45, 55),
 
@@ -613,14 +608,14 @@ local RayfieldLibrary = {
 			ToggleDisabled = Color3.fromRGB(70, 70, 80),
 			ToggleEnabledStroke = Color3.fromRGB(0, 150, 240),
 			ToggleDisabledStroke = Color3.fromRGB(75, 75, 85),
-			ToggleEnabledOuterStroke = Color3.fromRGB(20, 100, 180), 
+			ToggleEnabledOuterStroke = Color3.fromRGB(20, 100, 180),
 			ToggleDisabledOuterStroke = Color3.fromRGB(55, 55, 65),
 
 			DropdownSelected = Color3.fromRGB(30, 70, 90),
 			DropdownUnselected = Color3.fromRGB(25, 30, 35),
 
 			InputBackground = Color3.fromRGB(25, 30, 35),
-			InputStroke = Color3.fromRGB(45, 50, 60), 
+			InputStroke = Color3.fromRGB(45, 50, 60),
 			PlaceholderColor = Color3.fromRGB(150, 150, 160)
 		},
 
@@ -1007,10 +1002,6 @@ local RayfieldLibrary = {
 	}
 }
 
-
-
-
-
 local RayfieldAssetId = customAssetId or 10804731440
 local Rayfield = useStudio and script.Parent:FindFirstChild('Rayfield') or game:GetObjects("rbxassetid://"..RayfieldAssetId)[1]
 local buildAttempts = 0
@@ -1042,7 +1033,7 @@ Rayfield.Enabled = false
 
 if gethui then
 	Rayfield.Parent = gethui()
-elseif syn and syn.protect_gui then 
+elseif syn and syn.protect_gui then
 	syn.protect_gui(Rayfield)
 	Rayfield.Parent = CoreGui
 elseif not useStudio and CoreGui:FindFirstChild("RobloxGui") then
@@ -1094,6 +1085,11 @@ do
 		["16"] = AssetBaseURL.."16.png",
 		["17"] = AssetBaseURL.."17.png",
 		["18"] = AssetBaseURL.."18.png",
+		["19"] = AssetBaseURL.."19.png",
+		["20"] = AssetBaseURL.."20.png",
+		["21"] = AssetBaseURL.."21.png",
+		["22"] = AssetBaseURL.."22.png",
+		["23"] = AssetBaseURL.."23.png",
 	}
 
 	for id, _ in assetFiles do
@@ -1153,13 +1149,96 @@ do
 		secureNotify("no_getcustomasset", "Rayfield", "Your executor does not support getcustomasset. Some UI images may not render correctly.")
 	end
 
-
 	Rayfield.Main.Shadow.Image.Image = customAssets["2"]
 	Rayfield.Main.Topbar.Hide.Image = customAssets["3"]
 	Rayfield.Main.Topbar.ChangeSize.Image = customAssets["4"]
 	Rayfield.Main.Topbar.Settings.Image = customAssets["5"]
 	Rayfield.Main.Topbar.Icon.Image = customAssets["6"]
 	Rayfield.Main.Topbar.Search.Image = customAssets["7"]
+
+	if customAssets["folder"] == nil or customAssets["folder"] == "" then
+		pcall(function()
+			if type(getcustomasset) == "function" then
+				if isfile and isfile("Rayfield_Assets/19.png") then
+					customAssets["folder"] = getcustomasset("Rayfield_Assets/19.png")
+				elseif isfile and isfile("19.png") then
+					customAssets["folder"] = getcustomasset("19.png")
+				elseif customAssets["19"] and customAssets["19"] ~= "" then
+					customAssets["folder"] = customAssets["19"]
+				end
+			end
+		end)
+	end
+	if customAssets["file"] == nil or customAssets["file"] == "" then
+		pcall(function()
+			if type(getcustomasset) == "function" then
+				if isfile and isfile("Rayfield_Assets/20.png") then
+					customAssets["file"] = getcustomasset("Rayfield_Assets/20.png")
+				elseif isfile and isfile("20.png") then
+					customAssets["file"] = getcustomasset("20.png")
+				elseif customAssets["20"] and customAssets["20"] ~= "" then
+					customAssets["file"] = customAssets["20"]
+				end
+			end
+		end)
+	end
+	if customAssets["run"] == nil or customAssets["run"] == "" then
+		pcall(function()
+			if type(getcustomasset) == "function" then
+				if isfile and isfile("Rayfield_Assets/21.png") then
+					customAssets["run"] = getcustomasset("Rayfield_Assets/21.png")
+				elseif isfile and isfile("21.png") then
+					customAssets["run"] = getcustomasset("21.png")
+				elseif customAssets["21"] and customAssets["21"] ~= "" then
+					customAssets["run"] = customAssets["21"]
+				end
+			end
+		end)
+	end
+	if customAssets["copy"] == nil or customAssets["copy"] == "" then
+		pcall(function()
+			if type(getcustomasset) == "function" then
+				if isfile and isfile("Rayfield_Assets/22.png") then
+					customAssets["copy"] = getcustomasset("Rayfield_Assets/22.png")
+				elseif isfile and isfile("22.png") then
+					customAssets["copy"] = getcustomasset("22.png")
+				elseif customAssets["22"] and customAssets["22"] ~= "" then
+					customAssets["copy"] = customAssets["22"]
+				end
+			end
+		end)
+	end
+	if customAssets["mobile"] == nil or customAssets["mobile"] == "" then
+		pcall(function()
+			if type(getcustomasset) == "function" then
+				if isfile and isfile("Rayfield_Assets/23.png") then
+					customAssets["mobile"] = getcustomasset("Rayfield_Assets/23.png")
+				elseif isfile and isfile("23.png") then
+					customAssets["mobile"] = getcustomasset("23.png")
+				elseif customAssets["23"] and customAssets["23"] ~= "" then
+					customAssets["mobile"] = customAssets["23"]
+				end
+			end
+		end)
+	end
+
+	local FilesBtn = Rayfield.Main.Topbar:FindFirstChild("Files")
+	if not FilesBtn then
+		FilesBtn = Rayfield.Main.Topbar.Settings:Clone()
+		FilesBtn.Name = "Files"
+		FilesBtn.Parent = Rayfield.Main.Topbar
+	end
+	FilesBtn.Position = UDim2.new(1, -105, 0.5, 0)
+	FilesBtn.Size = UDim2.new(0, 24, 0, 24)
+	FilesBtn.AnchorPoint = Vector2.new(1, 0.5)
+	FilesBtn.Image = customAssets["folder"] or ""
+	FilesBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	FilesBtn.ImageTransparency = 0.8
+	FilesBtn.Visible = true
+	FilesBtn.Active = true
+	FilesBtn.ZIndex = 10
+
+	Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
 	Rayfield.Main.Topbar.Search.ImageRectOffset = Vector2.new(0, 0)
 	Rayfield.Main.Topbar.Search.ImageRectSize = Vector2.new(0, 0)
 	Rayfield.Main.Elements.Template.Toggle.Switch.Shadow.Image = customAssets["8"]
@@ -1200,6 +1279,30 @@ do
 			ensureFolder(RayfieldFolder)
 			ensureFolder(AssetPath)
 			ensureFolder(ConfigurationFolder)
+			if isfile and isfile("Rayfield_Assets/folder.png") then
+				pcall(writefile, AssetPath .. "/folder.png", readfile("Rayfield_Assets/folder.png"))
+				pcall(writefile, "folder.png", readfile("Rayfield_Assets/folder.png"))
+			elseif isfile and isfile("folder.png") then
+				pcall(writefile, AssetPath .. "/folder.png", readfile("folder.png"))
+			end
+			if isfile and isfile("Rayfield_Assets/file.png") then
+				pcall(writefile, AssetPath .. "/file.png", readfile("Rayfield_Assets/file.png"))
+				pcall(writefile, "file.png", readfile("Rayfield_Assets/file.png"))
+			elseif isfile and isfile("file.png") then
+				pcall(writefile, AssetPath .. "/file.png", readfile("file.png"))
+			end
+			if isfile and isfile("Rayfield_Assets/run.png") then
+				pcall(writefile, AssetPath .. "/run.png", readfile("Rayfield_Assets/run.png"))
+				pcall(writefile, "run.png", readfile("Rayfield_Assets/run.png"))
+			elseif isfile and isfile("run.png") then
+				pcall(writefile, AssetPath .. "/run.png", readfile("run.png"))
+			end
+			if isfile and isfile("Rayfield_Assets/copy.png") then
+				pcall(writefile, AssetPath .. "/copy.png", readfile("Rayfield_Assets/copy.png"))
+				pcall(writefile, "copy.png", readfile("Rayfield_Assets/copy.png"))
+			elseif isfile and isfile("copy.png") then
+				pcall(writefile, AssetPath .. "/copy.png", readfile("copy.png"))
+			end
 			if isfile and isfile("Rayfield_Assets/1.png") then
 				pcall(writefile, AssetPath .. "/1.png", readfile("Rayfield_Assets/1.png"))
 				pcall(writefile, "1.png", readfile("Rayfield_Assets/1.png"))
@@ -1232,8 +1335,6 @@ if UserInputService.TouchEnabled then
 	useMobilePrompt = true
 end
 
-
-
 local Main = Rayfield.Main
 local MPrompt = Rayfield:FindFirstChild('Prompt')
 local Topbar = Main.Topbar
@@ -1257,10 +1358,10 @@ local function updateDragBarPosition(instant)
 	if mainHeight <= 0 then mainHeight = 475 end
 	local mainWidth = Main.Size.X.Offset
 	if mainWidth <= 0 then mainWidth = 500 end
-	
+
 	local targetYOffset = (mainHeight / 2) + 18
 	local targetPos = UDim2.new(Main.Position.X.Scale, Main.Position.X.Offset, Main.Position.Y.Scale, Main.Position.Y.Offset + targetYOffset)
-	
+
 	if instant then
 		dragBar.Position = targetPos
 	else
@@ -1320,6 +1421,8 @@ local Notifications = Rayfield.Notifications
 local keybindConnections = {}
 
 local SelectedTheme = RayfieldLibrary.Theme.Default
+local currentUIFont = Enum.Font.Gotham
+local refreshFileListGlobal = nil
 
 local function ChangeTheme(Theme)
 	if typeof(Theme) == 'string' then
@@ -1340,6 +1443,14 @@ local function ChangeTheme(Theme)
 		SelectedTheme = merged
 	end
 
+	if not SelectedTheme.Font then
+		SelectedTheme.Font = currentUIFont
+	else
+		currentUIFont = SelectedTheme.Font
+	end
+
+	local themeAccent = SelectedTheme.Accent or SelectedTheme.ToggleEnabled or SelectedTheme.SliderProgress or SelectedTheme.TextColor or Color3.fromRGB(255, 255, 255)
+
 	local anim = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
 	TweenService:Create(Rayfield.Main, anim, {BackgroundColor3 = SelectedTheme.Background}):Play()
@@ -1350,9 +1461,27 @@ local function ChangeTheme(Theme)
 	Rayfield.Main.Topbar.ChangeSize.ImageColor3 = SelectedTheme.TextColor
 	Rayfield.Main.Topbar.Hide.ImageColor3 = SelectedTheme.TextColor
 	Rayfield.Main.Topbar.Search.ImageColor3 = SelectedTheme.TextColor
+	if Rayfield.Main.Topbar:FindFirstChild('Icon') then
+		Rayfield.Main.Topbar.Icon.ImageColor3 = themeAccent
+	end
+	if Rayfield.Main.Topbar:FindFirstChild('Files') then
+		Rayfield.Main.Topbar.Files.ImageColor3 = SelectedTheme.TextColor
+	end
 	if Topbar:FindFirstChild('Settings') then
 		Rayfield.Main.Topbar.Settings.ImageColor3 = SelectedTheme.TextColor
 		Rayfield.Main.Topbar.Divider.BackgroundColor3 = SelectedTheme.ElementStroke
+	end
+
+	local mobileToggle = Rayfield:FindFirstChild("RayfieldMobileToggle")
+	if mobileToggle then
+		TweenService:Create(mobileToggle, anim, {BackgroundColor3 = SelectedTheme.SecondaryElementBackground}):Play()
+		if mobileToggle:FindFirstChild("UIStroke") then
+			TweenService:Create(mobileToggle.UIStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
+		end
+		local icon = mobileToggle:FindFirstChild("Icon")
+		if icon then
+			TweenService:Create(icon, anim, {ImageColor3 = themeAccent}):Play()
+		end
 	end
 
 	Main.Search.BackgroundColor3 = SelectedTheme.TextColor
@@ -1367,7 +1496,7 @@ local function ChangeTheme(Theme)
 
 	for _, text in ipairs(Rayfield:GetDescendants()) do
 		if text.Parent and text.Parent.Parent ~= Notifications then
-			if text:IsA('TextLabel') or text:IsA('TextBox') then
+			if text:IsA('TextLabel') or text:IsA('TextBox') or text:IsA('TextButton') then
 				text.TextColor3 = SelectedTheme.TextColor
 				if SelectedTheme.Font and not text:GetAttribute("KeepFont") then
 					pcall(function() text.Font = SelectedTheme.Font end)
@@ -1585,10 +1714,9 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 	end)
 end
 
-
 local function PackColor(Color)
 	return {R = Color.R * 255, G = Color.G * 255, B = Color.B * 255}
-end    
+end
 
 local function UnpackColor(Color)
 	return Color3.fromRGB(Color.R, Color.G, Color.B)
@@ -1609,9 +1737,9 @@ local function LoadConfiguration(Configuration)
 					changed = true
 					Flag:Set(UnpackColor(FlagValue))
 				else
-					if (Flag.CurrentValue or Flag.CurrentKeybind or Flag.CurrentOption or Flag.Color) ~= FlagValue then 
+					if (Flag.CurrentValue or Flag.CurrentKeybind or Flag.CurrentOption or Flag.Color) ~= FlagValue then
 						changed = true
-						Flag:Set(FlagValue) 	
+						Flag:Set(FlagValue)
 					end
 				end
 			end)
@@ -1664,7 +1792,6 @@ local function SaveConfiguration()
 	if debugX then
 	end
 
-
 	callSafely(writefile, ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension, tostring(HttpService:JSONEncode(Data)))
 end
 
@@ -1688,7 +1815,6 @@ function RayfieldLibrary:Notify(data)
 		else
 			newNotification.Icon.Image = ""
 		end
-
 
 		newNotification.Title.TextColor3 = SelectedTheme.TextColor
 		newNotification.Description.TextColor3 = SelectedTheme.TextColor
@@ -1887,7 +2013,7 @@ local function Hide(notify: boolean?)
 
 	Debounce = true
 	if notify then
-		if useMobilePrompt then 
+		if useMobilePrompt then
 			RayfieldLibrary:Notify({Title = "Interface Hidden", Content = "The interface has been hidden, you can unhide the interface by tapping 'Show'.", Duration = 7, Image = 4400697855})
 		else
 			RayfieldLibrary:Notify({Title = "Interface Hidden", Content = "The interface has been hidden, you can unhide the interface by tapping " .. tostring(getSetting("General", "rayfieldOpen")) .. ".", Duration = 7, Image = 4400697855})
@@ -1954,7 +2080,6 @@ local function Maximise()
 	task.wait(0.5)
 	Debounce = false
 end
-
 
 local function Unhide()
 	Debounce = true
@@ -2189,7 +2314,7 @@ local function createSettings(window, winSettings)
 		"Ubuntu"
 	}
 
-	local initialFontName = "Gotham"
+	local initialFontName = currentUIFont and currentUIFont.Name or "Gotham"
 	if winSettings.Font then
 		if type(winSettings.Font) == "string" and table.find(fontList, winSettings.Font) then
 			initialFontName = winSettings.Font
@@ -2209,12 +2334,18 @@ local function createSettings(window, winSettings)
 		Callback = function(Option)
 			local chosen = typeof(Option) == "table" and Option[1] or Option
 			local targetFont = safeFont(chosen) or Enum.Font.Gotham
+			currentUIFont = targetFont
 			SelectedTheme.Font = targetFont
 			for _, desc in ipairs(Rayfield:GetDescendants()) do
 				if (desc:IsA("TextLabel") or desc:IsA("TextBox") or desc:IsA("TextButton")) and not desc:GetAttribute("KeepFont") then
 					pcall(function() desc.Font = targetFont end)
 				end
 			end
+			pcall(function()
+				if refreshFileListGlobal then
+					refreshFileListGlobal()
+				end
+			end)
 		end
 	})
 
@@ -2574,9 +2705,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 	if getgenv then getgenv().rayfieldCached = true end
 
 	if not correctBuild and not Settings.DisableBuildWarnings then
-		task.delay(3, 
-			function() 
-				RayfieldLibrary:Notify({Title = 'Build Mismatch', Content = 'Rayfield may encounter issues as you are running an incompatible interface version ('.. ((Rayfield:FindFirstChild('Build') and Rayfield.Build.Value) or 'No Build') ..').\n\nThis version of Rayfield is intended for interface build '..InterfaceBuild..'.\n\nTry rejoining and then run the script twice.', Image = 4335487866, Duration = 15})		
+		task.delay(3,
+			function()
+				RayfieldLibrary:Notify({Title = 'Build Mismatch', Content = 'Rayfield may encounter issues as you are running an incompatible interface version ('.. ((Rayfield:FindFirstChild('Build') and Rayfield.Build.Value) or 'No Build') ..').\n\nThis version of Rayfield is intended for interface build '..InterfaceBuild..'.\n\nTry rejoining and then run the script twice.', Image = 4335487866, Duration = 15})
 			end)
 	end
 
@@ -2685,6 +2816,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 	if Settings.Font then
 		local customF = safeFont(Settings.Font) or (typeof(Settings.Font) == "EnumItem" and Settings.Font)
 		if customF then
+			currentUIFont = customF
 			SelectedTheme.Font = customF
 			for _, desc in ipairs(Rayfield:GetDescendants()) do
 				if (desc:IsA("TextLabel") or desc:IsA("TextBox") or desc:IsA("TextButton")) and not desc:GetAttribute("KeepFont") then
@@ -2730,7 +2862,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 			ensureFolder(ConfigurationFolder)
 		end
 	end)
-
 
 	makeDraggable(Main, Topbar, false, {dragOffset, dragOffsetMobile})
 	if dragBar then dragBar.Position = useMobileSizing and UDim2.new(0.5, 0, 0.5, dragOffsetMobile) or UDim2.new(0.5, 0, 0.5, dragOffset) makeDraggable(Main, dragInteract, true, {dragOffset, dragOffsetMobile}) end
@@ -2820,7 +2951,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			if gethui then
 				KeyUI.Parent = gethui()
-			elseif syn and syn.protect_gui then 
+			elseif syn and syn.protect_gui then
 				syn.protect_gui(KeyUI)
 				KeyUI.Parent = CoreGui
 			elseif not useStudio and CoreGui:FindFirstChild("RobloxGui") then
@@ -2880,13 +3011,11 @@ function RayfieldLibrary:CreateWindow(Settings)
 			task.wait(0.15)
 			TweenService:Create(KeyMain.Hide, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {ImageTransparency = 0.3}):Play()
 
-
 			KeyUI.Main.Input.InputBox.FocusLost:Connect(function()
 				if #KeyUI.Main.Input.InputBox.Text == 0 then return end
 				local KeyFound = false
 				local FoundKey = ''
 				for _, MKey in ipairs(Settings.KeySettings.Key) do
-
 
 					if KeyMain.Input.InputBox.Text == MKey then
 						KeyFound = true
@@ -2951,7 +3080,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 	task.wait(0.05)
 	TweenService:Create(LoadingFrame.Version, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
-
 	Elements.Template.LayoutOrder = 100000
 	Elements.Template.Visible = false
 
@@ -2984,8 +3112,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TabButton.Title.TextXAlignment = Enum.TextXAlignment.Left
 			TabButton.Size = UDim2.new(0, TabButton.Title.TextBounds.X + 52, 0, 30)
 		end
-
-
 
 		TabButton.BackgroundTransparency = 1
 		TabButton.Title.TextTransparency = 1
@@ -3035,7 +3161,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TabButton.Title.TextColor3 = SelectedTheme.TabTextColor
 		end
 
-
 		task.wait(0.1)
 		if FirstTab or Ext then
 			TabButton.BackgroundColor3 = SelectedTheme.TabBackground
@@ -3054,7 +3179,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TweenService:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 		end
-
 
 		TabButton.Interact.MouseButton1Click:Connect(function()
 			if Minimised then return end
@@ -3100,8 +3224,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			TweenService:Create(Button, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Button.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			TweenService:Create(Button.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
-
+			TweenService:Create(Button.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			Button.Interact.MouseButton1Click:Connect(function()
 				local Success, Response = pcall(ButtonSettings.Callback)
@@ -3183,10 +3306,10 @@ function RayfieldLibrary:CreateWindow(Settings)
 			ColorPicker.HexInput.BackgroundColor3 = SelectedTheme.InputBackground
 			ColorPicker.HexInput.UIStroke.Color = SelectedTheme.InputStroke
 
-			local opened = false 
+			local opened = false
 			local mouse = Players.LocalPlayer:GetMouse()
-			local mainDragging = false 
-			local sliderDragging = false 
+			local mainDragging = false
+			local sliderDragging = false
 			ColorPicker.Interact.MouseButton1Down:Connect(function()
 				task.spawn(function()
 					TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
@@ -3197,7 +3320,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				end)
 
 				if not opened then
-					opened = true 
+					opened = true
 					TweenService:Create(Background, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 18, 0, 15)}):Play()
 					task.wait(0.1)
 					TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 120)}):Play()
@@ -3232,22 +3355,22 @@ function RayfieldLibrary:CreateWindow(Settings)
 				end end)
 			Main.MouseButton1Down:Connect(function()
 				if opened then
-					mainDragging = true 
+					mainDragging = true
 				end
 			end)
 			Main.MainPoint.MouseButton1Down:Connect(function()
 				if opened then
-					mainDragging = true 
+					mainDragging = true
 				end
 			end)
 			Slider.MouseButton1Down:Connect(function()
-				sliderDragging = true 
+				sliderDragging = true
 			end)
 			Slider.SliderPoint.MouseButton1Down:Connect(function()
-				sliderDragging = true 
+				sliderDragging = true
 			end)
 			local h,s,v = ColorPickerSettings.Color:ToHSV()
-			local color = Color3.fromHSV(h,s,v) 
+			local color = Color3.fromHSV(h,s,v)
 			local hex = string.format("#%02X%02X%02X",color.R*0xFF,color.G*0xFF,color.B*0xFF)
 			ColorPicker.HexInput.InputBox.Text = hex
 			local function setDisplay()
@@ -3258,7 +3381,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				local x = h * Slider.AbsoluteSize.X
 				Slider.SliderPoint.Position = UDim2.new(0,x-Slider.SliderPoint.AbsoluteSize.X/2,0.5,0)
 				Slider.SliderPoint.ImageColor3 = Color3.fromHSV(h,1,1)
-				local color = Color3.fromHSV(h,s,v) 
+				local color = Color3.fromHSV(h,s,v)
 				local r,g,b = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
 				ColorPicker.RGB.RInput.InputBox.Text = tostring(r)
 				ColorPicker.RGB.GInput.InputBox.Text = tostring(g)
@@ -3275,9 +3398,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 						hex = ColorPicker.HexInput.InputBox.Text
 						setDisplay()
 						ColorPickerSettings.Color = rgbColor
-					end) 
-				then 
-					ColorPicker.HexInput.InputBox.Text = hex 
+					end)
+				then
+					ColorPicker.HexInput.InputBox.Text = hex
 				end
 				pcall(function()ColorPickerSettings.Callback(Color3.fromHSV(h,s,v))end)
 				local r,g,b = math.floor((h*255)+0.5),math.floor((s*255)+0.5),math.floor((v*255)+0.5)
@@ -3287,17 +3410,17 @@ function RayfieldLibrary:CreateWindow(Settings)
 				end
 			end)
 			local function rgbBoxes(box,toChange)
-				local value = tonumber(box.Text) 
-				local color = Color3.fromHSV(h,s,v) 
+				local value = tonumber(box.Text)
+				local color = Color3.fromHSV(h,s,v)
 				local oldR,oldG,oldB = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
-				local save 
+				local save
 				if toChange == "R" then save = oldR;oldR = value elseif toChange == "G" then save = oldG;oldG = value else save = oldB;oldB = value end
-				if value then 
+				if value then
 					value = math.clamp(value,0,255)
 					h,s,v = Color3.fromRGB(oldR,oldG,oldB):ToHSV()
 
 					setDisplay()
-				else 
+				else
 					box.Text = tostring(save)
 				end
 				local r,g,b = math.floor((h*255)+0.5),math.floor((s*255)+0.5),math.floor((v*255)+0.5)
@@ -3329,7 +3452,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					Display.BackgroundColor3 = Color3.fromHSV(h,s,v)
 					Main.MainPoint.ImageColor3 = Color3.fromHSV(h,s,v)
 					Background.BackgroundColor3 = Color3.fromHSV(h,1,1)
-					local color = Color3.fromHSV(h,s,v) 
+					local color = Color3.fromHSV(h,s,v)
 					local r,g,b = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
 					ColorPicker.RGB.RInput.InputBox.Text = tostring(r)
 					ColorPicker.RGB.GInput.InputBox.Text = tostring(g)
@@ -3341,7 +3464,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 						SaveConfiguration()
 					end
 				end
-				if sliderDragging then 
+				if sliderDragging then
 					local localX = math.clamp(mouse.X-Slider.AbsolutePosition.X,0,Slider.AbsoluteSize.X)
 					h = localX / Slider.AbsoluteSize.X
 					Display.BackgroundColor3 = Color3.fromHSV(h,s,v)
@@ -3349,7 +3472,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					Slider.SliderPoint.ImageColor3 = Color3.fromHSV(h,1,1)
 					Background.BackgroundColor3 = Color3.fromHSV(h,1,1)
 					Main.MainPoint.ImageColor3 = Color3.fromHSV(h,s,v)
-					local color = Color3.fromHSV(h,s,v) 
+					local color = Color3.fromHSV(h,s,v)
 					local r,g,b = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
 					ColorPicker.RGB.RInput.InputBox.Text = tostring(r)
 					ColorPicker.RGB.GInput.InputBox.Text = tostring(g)
@@ -3553,8 +3676,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			TweenService:Create(Paragraph, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Paragraph.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			TweenService:Create(Paragraph.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
-			TweenService:Create(Paragraph.Content, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+			TweenService:Create(Paragraph.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+			TweenService:Create(Paragraph.Content, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			function ParagraphValue:Set(NewParagraphSettings)
 				Paragraph.Title.Text = NewParagraphSettings.Title
@@ -3587,7 +3710,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			TweenService:Create(Input, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Input.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			TweenService:Create(Input.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+			TweenService:Create(Input.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			Input.InputFrame.InputBox.PlaceholderText = InputSettings.PlaceholderText
 			Input.InputFrame.Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
@@ -3710,7 +3833,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			TweenService:Create(Dropdown, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Dropdown.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			TweenService:Create(Dropdown.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+			TweenService:Create(Dropdown.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			for _, ununusedoption in ipairs(Dropdown.List:GetChildren()) do
 				if ununusedoption.ClassName == "Frame" and ununusedoption.Name ~= "Placeholder" then
@@ -3745,7 +3868,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 						end
 					end
 					TweenService:Create(Dropdown.List, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ScrollBarImageTransparency = 1}):Play()
-					TweenService:Create(Dropdown.Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Rotation = 180}):Play()	
+					TweenService:Create(Dropdown.Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Rotation = 180}):Play()
 					task.wait(0.35)
 					Dropdown.List.Visible = false
 					Debounce = false
@@ -3753,7 +3876,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Dropdown, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 180)}):Play()
 					Dropdown.List.Visible = true
 					TweenService:Create(Dropdown.List, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ScrollBarImageTransparency = 0.7}):Play()
-					TweenService:Create(Dropdown.Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Rotation = 0}):Play()	
+					TweenService:Create(Dropdown.Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Rotation = 0}):Play()
 					for _, DropdownOpt in ipairs(Dropdown.List:GetChildren()) do
 						if DropdownOpt.ClassName == "Frame" and DropdownOpt.Name ~= "Placeholder" then
 							if DropdownOpt.Name ~= Dropdown.Selected.Text then
@@ -3793,12 +3916,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 					DropdownOption.UIStroke.Transparency = 1
 					DropdownOption.Title.TextTransparency = 1
 
-
-
-
 					DropdownOption.Interact.ZIndex = 50
 					DropdownOption.Interact.MouseButton1Click:Connect(function()
-						if not DropdownSettings.MultipleOptions and table.find(DropdownSettings.CurrentOption, Option) then 
+						if not DropdownSettings.MultipleOptions and table.find(DropdownSettings.CurrentOption, Option) then
 							return
 						end
 
@@ -3840,7 +3960,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 							Debounce = true
 						end
 
-
 						local Success, Response = pcall(function()
 							DropdownSettings.Callback(DropdownSettings.CurrentOption)
 						end)
@@ -3871,7 +3990,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 								end
 							end
 							TweenService:Create(Dropdown.List, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ScrollBarImageTransparency = 1}):Play()
-							TweenService:Create(Dropdown.Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Rotation = 180}):Play()	
+							TweenService:Create(Dropdown.Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Rotation = 180}):Play()
 							task.wait(0.35)
 							Dropdown.List.Visible = false
 						end
@@ -3932,7 +4051,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 						Dropdown.Selected.Font = curFont
 					end
 				end
-
 
 				local Success, Response = pcall(function()
 					DropdownSettings.Callback(NewOption)
@@ -4021,7 +4139,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			TweenService:Create(Keybind, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Keybind.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			TweenService:Create(Keybind.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+			TweenService:Create(Keybind.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			Keybind.KeybindFrame.KeybindBox.Text = KeybindSettings.CurrentKeybind
 			Keybind.KeybindFrame.Size = UDim2.new(0, Keybind.KeybindFrame.KeybindBox.TextBounds.X + 24, 0, 30)
@@ -4153,7 +4271,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			TweenService:Create(Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			TweenService:Create(Toggle.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+			TweenService:Create(Toggle.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			if ToggleSettings.CurrentValue == true then
 				Toggle.Switch.Indicator.Position = UDim2.new(1, -20, 0.5, 0)
@@ -4185,7 +4303,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.Switch.Indicator, TweenInfo.new(0.8, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {BackgroundColor3 = SelectedTheme.ToggleDisabled}):Play()
 					TweenService:Create(Toggle.Switch.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Color = SelectedTheme.ToggleDisabledOuterStroke}):Play()
 					TweenService:Create(Toggle, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()	
+					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				else
 					ToggleSettings.CurrentValue = true
 					TweenService:Create(Toggle, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
@@ -4195,7 +4313,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.Switch.Indicator, TweenInfo.new(0.8, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {BackgroundColor3 = SelectedTheme.ToggleEnabled}):Play()
 					TweenService:Create(Toggle.Switch.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Color = SelectedTheme.ToggleEnabledOuterStroke}):Play()
 					TweenService:Create(Toggle, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()		
+					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				end
 
 				local Success, Response = pcall(function()
@@ -4228,9 +4346,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.Switch.Indicator.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Color = SelectedTheme.ToggleEnabledStroke}):Play()
 					TweenService:Create(Toggle.Switch.Indicator, TweenInfo.new(0.8, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {BackgroundColor3 = SelectedTheme.ToggleEnabled}):Play()
 					TweenService:Create(Toggle.Switch.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Color = SelectedTheme.ToggleEnabledOuterStroke}):Play()
-					TweenService:Create(Toggle.Switch.Indicator, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0,17,0,17)}):Play()	
+					TweenService:Create(Toggle.Switch.Indicator, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0,17,0,17)}):Play()
 					TweenService:Create(Toggle, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()	
+					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				else
 					ToggleSettings.CurrentValue = false
 					TweenService:Create(Toggle, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
@@ -4242,7 +4360,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.Switch.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Color = SelectedTheme.ToggleDisabledOuterStroke}):Play()
 					TweenService:Create(Toggle.Switch.Indicator, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0,17,0,17)}):Play()
 					TweenService:Create(Toggle, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()	
+					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				end
 
 				local Success, Response = pcall(function()
@@ -4272,7 +4390,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 					end
 				end
 			end
-
 
 			Rayfield.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
 				Toggle.Switch.BackgroundColor3 = SelectedTheme.ToggleBackground
@@ -4323,7 +4440,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			TweenService:Create(Slider, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Slider.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
-			TweenService:Create(Slider.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+			TweenService:Create(Slider.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			Slider.Main.Progress.Size =	UDim2.new(0, Slider.Main.AbsoluteSize.X * ((SliderSettings.CurrentValue - SliderSettings.Range[1]) / (SliderSettings.Range[2] - SliderSettings.Range[1])) > 5 and Slider.Main.AbsoluteSize.X * ((SliderSettings.CurrentValue - SliderSettings.Range[1]) / (SliderSettings.Range[2] - SliderSettings.Range[1])) or 5, 1, 0)
 
@@ -4342,19 +4459,19 @@ function RayfieldLibrary:CreateWindow(Settings)
 			end)
 
 			Slider.Main.Interact.InputBegan:Connect(function(Input)
-				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then 
+				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 					TweenService:Create(Slider.Main.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
 					TweenService:Create(Slider.Main.Progress.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
-					SLDragging = true 
-				end 
+					SLDragging = true
+				end
 			end)
 
-			Slider.Main.Interact.InputEnded:Connect(function(Input) 
-				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then 
+			Slider.Main.Interact.InputEnded:Connect(function(Input)
+				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 					TweenService:Create(Slider.Main.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
 					TweenService:Create(Slider.Main.Progress.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.3}):Play()
-					SLDragging = false 
-				end 
+					SLDragging = false
+				end
 			end)
 
 			Slider.Main.Interact.MouseButton1Down:Connect(function(X)
@@ -4486,7 +4603,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 	Elements.Visible = true
 
-
 	task.wait(1.1)
 	TweenService:Create(Main, TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 390, 0, 90)}):Play()
 	task.wait(0.3)
@@ -4511,7 +4627,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 	end
 	Topbar.ChangeSize.ImageTransparency = 1
 	Topbar.Hide.ImageTransparency = 1
-
 
 	task.wait(0.5)
 	Topbar.Visible = true
@@ -4645,7 +4760,7 @@ end)
 
 Main.Search.Input:GetPropertyChangedSignal('Text'):Connect(function()
 	if #Main.Search.Input.Text > 0 then
-		if not Elements.UIPageLayout.CurrentPage:FindFirstChild('SearchTitle-fsefsefesfsefesfesfThanks') then 
+		if not Elements.UIPageLayout.CurrentPage:FindFirstChild('SearchTitle-fsefsefesfsefesfesfThanks') then
 			local searchTitle = Elements.Template.SectionTitle:Clone()
 			searchTitle.Size = UDim2.new(1, -10, 0, 24)
 			searchTitle.ClipsDescendants = false
@@ -4750,8 +4865,883 @@ if Topbar:FindFirstChild('Settings') then
 
 end
 
+	local folderAsset = customAssets["folder"] or ""
+	local fileAsset = customAssets["file"] or ""
+	local runAsset = customAssets["run"] or ""
+	local copyAsset = customAssets["copy"] or ""
+	local mobileAsset = customAssets["mobile"] or ""
+	pcall(function()
+		if type(getcustomasset) == "function" then
+			if folderAsset == "" then
+				if isfile and isfile("Rayfield_Assets/19.png") then
+					folderAsset = getcustomasset("Rayfield_Assets/19.png")
+				elseif isfile and isfile("19.png") then
+					folderAsset = getcustomasset("19.png")
+				elseif customAssets["19"] and customAssets["19"] ~= "" then
+					folderAsset = customAssets["19"]
+				end
+			end
+			if fileAsset == "" then
+				if isfile and isfile("Rayfield_Assets/20.png") then
+					fileAsset = getcustomasset("Rayfield_Assets/20.png")
+				elseif isfile and isfile("20.png") then
+					fileAsset = getcustomasset("20.png")
+				elseif customAssets["20"] and customAssets["20"] ~= "" then
+					fileAsset = customAssets["20"]
+				end
+			end
+			if runAsset == "" then
+				if isfile and isfile("Rayfield_Assets/21.png") then
+					runAsset = getcustomasset("Rayfield_Assets/21.png")
+				elseif isfile and isfile("21.png") then
+					runAsset = getcustomasset("21.png")
+				elseif customAssets["21"] and customAssets["21"] ~= "" then
+					runAsset = customAssets["21"]
+				end
+			end
+			if copyAsset == "" then
+				if isfile and isfile("Rayfield_Assets/22.png") then
+					copyAsset = getcustomasset("Rayfield_Assets/22.png")
+				elseif isfile and isfile("22.png") then
+					copyAsset = getcustomasset("22.png")
+				elseif customAssets["22"] and customAssets["22"] ~= "" then
+					copyAsset = customAssets["22"]
+				end
+			end
+			if mobileAsset == "" then
+				if isfile and isfile("Rayfield_Assets/23.png") then
+					mobileAsset = getcustomasset("Rayfield_Assets/23.png")
+				elseif isfile and isfile("23.png") then
+					mobileAsset = getcustomasset("23.png")
+				elseif customAssets["23"] and customAssets["23"] ~= "" then
+					mobileAsset = customAssets["23"]
+				end
+			end
+		end
+	end)
 
-Topbar.Hide.MouseButton1Click:Connect(function()
+	local mobileToggle = Rayfield:FindFirstChild("RayfieldMobileToggle")
+	if not mobileToggle then
+		mobileToggle = Instance.new("ImageButton")
+		mobileToggle.Name = "RayfieldMobileToggle"
+		mobileToggle.Size = UDim2.new(0, 50, 0, 50)
+		mobileToggle.Position = UDim2.new(0, 16, 0.5, -25)
+		mobileToggle.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+		mobileToggle.BackgroundTransparency = 0.15
+		mobileToggle.AutoButtonColor = false
+		mobileToggle.ZIndex = 150
+		mobileToggle.Active = true
+		mobileToggle.Parent = Rayfield
+
+		local mtCorner = Instance.new("UICorner", mobileToggle)
+		mtCorner.CornerRadius = UDim.new(0, 25)
+
+		local mtStroke = Instance.new("UIStroke", mobileToggle)
+		mtStroke.Color = SelectedTheme.ElementStroke
+		mtStroke.Thickness = 1.2
+		mtStroke.Transparency = 0.2
+
+		local mtScale = Instance.new("UIScale", mobileToggle)
+		mtScale.Scale = 1
+
+		local finalMobileAsset = ""
+		if type(getcustomasset) == "function" then
+			if isfile and isfile("Rayfield_Assets/23.png") then
+				finalMobileAsset = getcustomasset("Rayfield_Assets/23.png")
+			elseif isfile and isfile("23.png") then
+				finalMobileAsset = getcustomasset("23.png")
+			elseif customAssets["23"] and customAssets["23"] ~= "" then
+				finalMobileAsset = customAssets["23"]
+			elseif mobileAsset ~= "" then
+				finalMobileAsset = mobileAsset
+			end
+		end
+
+		local mtIcon = Instance.new("ImageLabel", mobileToggle)
+		mtIcon.Name = "Icon"
+		mtIcon.Size = UDim2.new(0, 38, 0, 38)
+		mtIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+		mtIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+		mtIcon.BackgroundTransparency = 1
+		mtIcon.ScaleType = Enum.ScaleType.Fit
+		mtIcon.Image = finalMobileAsset
+		local themeAccent = SelectedTheme.Accent or SelectedTheme.ToggleEnabled or SelectedTheme.SliderProgress or SelectedTheme.TextColor or Color3.fromRGB(255, 255, 255)
+		mtIcon.ImageColor3 = themeAccent
+		mtIcon.ImageTransparency = 0
+		mtIcon.ZIndex = 151
+		task.spawn(function()
+			pcall(function()
+				game:GetService("ContentProvider"):PreloadAsync({mtIcon})
+			end)
+		end)
+
+		local isDragging = false
+		local dragStart = nil
+		local startPos = nil
+		local hasMoved = false
+
+		mobileToggle.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				isDragging = true
+				hasMoved = false
+				dragStart = input.Position
+				startPos = mobileToggle.Position
+
+				TweenService:Create(mtScale, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = 0.9}):Play()
+				TweenService:Create(mobileToggle, TweenInfo.new(0.12, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.05}):Play()
+			end
+		end)
+
+		UserInputService.InputEnded:Connect(function(input)
+			if isDragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+				isDragging = false
+				TweenService:Create(mtScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+				TweenService:Create(mobileToggle, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.15}):Play()
+			end
+		end)
+
+		UserInputService.InputChanged:Connect(function(input)
+			if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				if dragStart and startPos then
+					local delta = input.Position - dragStart
+					if math.abs(delta.X) > 4 or math.abs(delta.Y) > 4 then
+						hasMoved = true
+					end
+					mobileToggle.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+				end
+			end
+		end)
+
+		mobileToggle.Activated:Connect(function()
+			if hasMoved then return end
+			local bounce = TweenService:Create(mtScale, TweenInfo.new(0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = 0.8})
+			bounce:Play()
+			bounce.Completed:Connect(function()
+				TweenService:Create(mtScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+			end)
+
+			if Debounce then return end
+			if Hidden then
+				Hidden = false
+				Unhide()
+			else
+				Hidden = true
+				Hide(false)
+			end
+		end)
+
+		mobileToggle.MouseEnter:Connect(function()
+			local currentAccent = SelectedTheme.Accent or SelectedTheme.ToggleEnabled or SelectedTheme.SliderProgress or SelectedTheme.TextColor or Color3.fromRGB(255, 255, 255)
+			TweenService:Create(mobileToggle, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.05}):Play()
+			TweenService:Create(mtStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Color = currentAccent, Transparency = 0}):Play()
+		end)
+		mobileToggle.MouseLeave:Connect(function()
+			if not isDragging then
+				TweenService:Create(mobileToggle, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.15}):Play()
+				TweenService:Create(mtStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Color = SelectedTheme.ElementStroke, Transparency = 0.2}):Play()
+			end
+		end)
+
+		local isMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled)
+		if Settings and Settings.MobileToggle ~= nil then
+			isMobile = Settings.MobileToggle
+		end
+
+		mobileToggle.Visible = isMobile
+	end
+
+	if mobileToggle then
+		local isMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled)
+		if Settings and Settings.MobileToggle ~= nil then
+			isMobile = Settings.MobileToggle
+		end
+		mobileToggle.Visible = isMobile
+
+		UserInputService.LastInputTypeChanged:Connect(function(lastInputType)
+			if lastInputType == Enum.UserInputType.Touch and (Settings == nil or Settings.MobileToggle == nil or Settings.MobileToggle == true) then
+				mobileToggle.Visible = true
+			end
+		end)
+	end
+
+	local filesBtn = Topbar:FindFirstChild("Files")
+	if not filesBtn then
+	    filesBtn = Topbar.Settings:Clone()
+	    filesBtn.Name = "Files"
+	    filesBtn.Parent = Topbar
+	end
+	filesBtn.Position = UDim2.new(1, -105, 0.5, 0)
+	filesBtn.Size = UDim2.new(0, 24, 0, 24)
+	filesBtn.AnchorPoint = Vector2.new(1, 0.5)
+	if folderAsset ~= "" then
+	    filesBtn.Image = folderAsset
+	end
+	filesBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	filesBtn.ImageTransparency = 0.8
+	filesBtn.Visible = true
+	filesBtn.ZIndex = 10
+	filesBtn.Active = true
+
+	filesBtn.MouseEnter:Connect(function()
+		TweenService:Create(filesBtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.4}):Play()
+	end)
+	filesBtn.MouseLeave:Connect(function()
+		TweenService:Create(filesBtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.8}):Play()
+	end)
+
+	Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
+
+	local function getUIFont()
+		return (SelectedTheme and SelectedTheme.Font) or currentUIFont or Enum.Font.Gotham
+	end
+
+	local workspacePage = Instance.new("Frame")
+	workspacePage.Name = "Workspace"
+	workspacePage.Size = UDim2.new(1, -20, 1, -10)
+	workspacePage.Position = UDim2.new(0.5, 0, 0.5, 0)
+	workspacePage.AnchorPoint = Vector2.new(0.5, 0.5)
+	workspacePage.BackgroundTransparency = 1
+	workspacePage.BorderSizePixel = 0
+	workspacePage.ClipsDescendants = true
+	workspacePage.Visible = true
+	workspacePage.Parent = Elements
+
+	local searchContainer = Instance.new("Frame")
+	searchContainer.Name = "SearchContainer"
+	searchContainer.Size = UDim2.new(1, -10, 0, 36)
+	searchContainer.Position = UDim2.new(0.5, 0, 0, 8)
+	searchContainer.AnchorPoint = Vector2.new(0.5, 0)
+	searchContainer.BackgroundColor3 = SelectedTheme.ElementBackground
+	searchContainer.BorderSizePixel = 0
+	searchContainer.Parent = workspacePage
+	local scCorner = Instance.new("UICorner", searchContainer); scCorner.CornerRadius = UDim.new(0, 6)
+	local scStroke = Instance.new("UIStroke", searchContainer); scStroke.Color = SelectedTheme.ElementStroke; scStroke.Thickness = 1
+
+	local searchInput = Instance.new("TextBox")
+	searchInput.Name = "Input"
+	searchInput.Size = UDim2.new(1, -24, 1, 0)
+	searchInput.Position = UDim2.new(0, 14, 0, 0)
+	searchInput.BackgroundTransparency = 1
+	searchInput.PlaceholderText = "Search files..."
+	searchInput.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
+	searchInput.Text = ""
+	searchInput.Font = getUIFont()
+	searchInput.TextSize = 13
+	searchInput.TextColor3 = SelectedTheme.TextColor
+	searchInput.TextXAlignment = Enum.TextXAlignment.Left
+	searchInput.ClearTextOnFocus = false
+	searchInput.Parent = searchContainer
+
+	local backBar = Instance.new("Frame")
+	backBar.Name = "BackBar"
+	backBar.Size = UDim2.new(1, -10, 0, 26)
+	backBar.Position = UDim2.new(0.5, 0, 0, 48)
+	backBar.AnchorPoint = Vector2.new(0.5, 0)
+	backBar.BackgroundTransparency = 1
+	backBar.Visible = false
+	backBar.Parent = workspacePage
+
+	local backBtn = Instance.new("TextButton")
+	backBtn.Name = "BackBtn"
+	backBtn.Size = UDim2.new(0, 70, 1, 0)
+	backBtn.Position = UDim2.new(0, 0, 0, 0)
+	backBtn.BackgroundColor3 = SelectedTheme.ElementBackground
+	backBtn.Text = "< Back"
+	backBtn.Font = getUIFont()
+	backBtn.TextSize = 11
+	backBtn.TextColor3 = SelectedTheme.TextColor
+	backBtn.Parent = backBar
+	local bbCorner = Instance.new("UICorner", backBtn); bbCorner.CornerRadius = UDim.new(0, 4)
+	local bbStroke = Instance.new("UIStroke", backBtn); bbStroke.Color = SelectedTheme.ElementStroke; bbStroke.Thickness = 1
+
+	local curDirLabel = Instance.new("TextLabel")
+	curDirLabel.Name = "CurDir"
+	curDirLabel.Text = ""
+	curDirLabel.Font = getUIFont()
+	curDirLabel.TextSize = 11
+	curDirLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+	curDirLabel.TextXAlignment = Enum.TextXAlignment.Left
+	curDirLabel.Position = UDim2.new(0, 80, 0, 0)
+	curDirLabel.Size = UDim2.new(1, -85, 1, 0)
+	curDirLabel.BackgroundTransparency = 1
+	curDirLabel.Parent = backBar
+
+	local listFrame = Instance.new("ScrollingFrame")
+	listFrame.Name = "FileList"
+	listFrame.Size = UDim2.new(1, -10, 1, -54)
+	listFrame.Position = UDim2.new(0.5, 0, 0, 50)
+	listFrame.AnchorPoint = Vector2.new(0.5, 0)
+	listFrame.BackgroundTransparency = 1
+	listFrame.BorderSizePixel = 0
+	listFrame.ScrollBarThickness = 4
+	listFrame.ScrollBarImageColor3 = SelectedTheme.ElementStroke
+	listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	listFrame.Parent = workspacePage
+
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.Padding = UDim.new(0, 4)
+	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	listLayout.Parent = listFrame
+
+	local currentPath = ""
+	local selectedItem = nil
+
+	local function formatSize(bytes)
+	    if not bytes or bytes <= 0 then return "-" end
+	    if bytes < 1024 then
+	        return bytes .. " B"
+	    elseif bytes < 1048576 then
+	        return string.format("%.1f KB", bytes / 1024)
+	    else
+	        return string.format("%.1f MB", bytes / 1048576)
+	    end
+	end
+
+	local function getExtension(name)
+	    local ext = string.match(name, "%.([^%.]+)$")
+	    return ext and string.upper(ext) or ""
+	end
+
+	local function cleanFileName(fullPath)
+	    local name = string.gsub(fullPath, "\\", "/")
+	    return string.match(name, "([^/]+)$") or fullPath
+	end
+
+	local contextOverlay = Instance.new("TextButton")
+	contextOverlay.Name = "ContextOverlay"
+	contextOverlay.Size = UDim2.new(1, 0, 1, 0)
+	contextOverlay.Position = UDim2.new(0, 0, 0, 0)
+	contextOverlay.BackgroundTransparency = 1
+	contextOverlay.Text = ""
+	contextOverlay.Visible = false
+	contextOverlay.ZIndex = 80
+	contextOverlay.Parent = Main
+
+	local contextMenu = Instance.new("Frame")
+	contextMenu.Name = "FileContextMenu"
+	contextMenu.Size = UDim2.new(0, 160, 0, 100)
+	contextMenu.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+	contextMenu.BackgroundTransparency = 1
+	contextMenu.BorderSizePixel = 0
+	contextMenu.ClipsDescendants = false
+	contextMenu.Visible = false
+	contextMenu.ZIndex = 90
+	contextMenu.Parent = Main
+
+	local cmScale = Instance.new("UIScale", contextMenu)
+	cmScale.Scale = 1
+
+	local cmCorner = Instance.new("UICorner", contextMenu)
+	cmCorner.CornerRadius = UDim.new(0, 8)
+
+	local cmStroke = Instance.new("UIStroke", contextMenu)
+	cmStroke.Color = SelectedTheme.ElementStroke
+	cmStroke.Thickness = 1
+	cmStroke.Transparency = 1
+
+	local cmLayout = Instance.new("UIListLayout", contextMenu)
+	cmLayout.Padding = UDim.new(0, 2)
+	cmLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	local cmPadding = Instance.new("UIPadding", contextMenu)
+	cmPadding.PaddingTop = UDim.new(0, 5)
+	cmPadding.PaddingBottom = UDim.new(0, 5)
+	cmPadding.PaddingLeft = UDim.new(0, 5)
+	cmPadding.PaddingRight = UDim.new(0, 5)
+
+	local function closeContextMenu()
+		if not contextMenu.Visible then return end
+		contextOverlay.Visible = false
+		local tw = TweenService:Create(contextMenu, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1
+		})
+		local twScale = TweenService:Create(cmScale, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Scale = 0.85
+		})
+		local twStroke = TweenService:Create(cmStroke, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Transparency = 1
+		})
+		tw:Play()
+		twScale:Play()
+		twStroke:Play()
+		for _, child in ipairs(contextMenu:GetChildren()) do
+			if child:IsA("TextButton") then
+				local icon = child:FindFirstChildOfClass("ImageLabel")
+				local lbl = child:FindFirstChildOfClass("TextLabel")
+				if icon then TweenService:Create(icon, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {ImageTransparency = 1}):Play() end
+				if lbl then TweenService:Create(lbl, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {TextTransparency = 1}):Play() end
+			end
+		end
+		tw.Completed:Connect(function()
+			if not contextOverlay.Visible then
+				contextMenu.Visible = false
+				cmScale.Scale = 1
+				for _, child in ipairs(contextMenu:GetChildren()) do
+					if child:IsA("TextButton") then child:Destroy() end
+				end
+			end
+		end)
+	end
+
+	contextOverlay.MouseButton1Click:Connect(closeContextMenu)
+	contextOverlay.MouseButton2Click:Connect(closeContextMenu)
+
+	local function openContextMenu(item, triggerBtn)
+		for _, child in ipairs(contextMenu:GetChildren()) do
+			if child:IsA("TextButton") then child:Destroy() end
+		end
+
+		local options = {}
+
+		if item.IsFolder then
+			table.insert(options, {
+				Name = "Open Folder",
+				Icon = folderAsset,
+				Color = Color3.fromRGB(255, 255, 255),
+				Callback = function()
+					currentPath = (currentPath == "") and item.Name or (currentPath .. "/" .. item.Name)
+					refreshList()
+				end
+			})
+			table.insert(options, {
+				Name = "Copy Path",
+				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
+				Color = Color3.fromRGB(255, 255, 255),
+				Callback = function()
+					if type(setclipboard) == "function" then
+						setclipboard(item.Path)
+						RayfieldLibrary:Notify({Title = "Copied", Content = "Folder path copied to clipboard", Duration = 2})
+					end
+				end
+			})
+			table.insert(options, {
+				Name = "Copy Name",
+				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
+				Color = Color3.fromRGB(255, 255, 255),
+				Callback = function()
+					if type(setclipboard) == "function" then
+						setclipboard(item.Name)
+						RayfieldLibrary:Notify({Title = "Copied", Content = "Folder name copied to clipboard", Duration = 2})
+					end
+				end
+			})
+		else
+			if item.Ext == "LUA" or item.Ext == "LUAU" or item.Ext == "TXT" then
+				table.insert(options, {
+					Name = "Run Script",
+					Icon = runAsset ~= "" and runAsset or "rbxassetid://6034287517",
+					Color = Color3.fromRGB(255, 255, 255),
+					Callback = function()
+						pcall(function()
+							local src = readfile(item.Path)
+							loadstring(src)()
+							RayfieldLibrary:Notify({Title = "Executed", Content = "Running " .. item.Name, Duration = 2})
+						end)
+					end
+				})
+			end
+
+			table.insert(options, {
+				Name = "Copy File",
+				Icon = copyAsset ~= "" and copyAsset or (fileAsset ~= "" and fileAsset or "rbxassetid://6034287525"),
+				Color = Color3.fromRGB(255, 255, 255),
+				Callback = function()
+					pcall(function()
+						if type(setclipboard) == "function" and type(readfile) == "function" then
+							setclipboard(readfile(item.Path))
+							RayfieldLibrary:Notify({Title = "Copied", Content = "File content copied to clipboard", Duration = 2})
+						end
+					end)
+				end
+			})
+
+			table.insert(options, {
+				Name = "Copy Path",
+				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
+				Color = Color3.fromRGB(255, 255, 255),
+				Callback = function()
+					if type(setclipboard) == "function" then
+						setclipboard(item.Path)
+						RayfieldLibrary:Notify({Title = "Copied", Content = "Path copied to clipboard", Duration = 2})
+					end
+				end
+			})
+
+			table.insert(options, {
+				Name = "Copy Name",
+				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
+				Color = Color3.fromRGB(255, 255, 255),
+				Callback = function()
+					if type(setclipboard) == "function" then
+						setclipboard(item.Name)
+						RayfieldLibrary:Notify({Title = "Copied", Content = "File name copied to clipboard", Duration = 2})
+					end
+				end
+			})
+		end
+
+		local itemH = 26
+		local totalHeight = #options * itemH + (#options - 1) * 2 + 12
+		local menuWidth = 160
+
+		for idx, opt in ipairs(options) do
+			local btn = Instance.new("TextButton")
+			btn.Name = opt.Name
+			btn.Size = UDim2.new(1, 0, 0, itemH)
+			btn.BackgroundColor3 = SelectedTheme.ElementBackground
+			btn.BackgroundTransparency = 1
+			btn.Text = ""
+			btn.AutoButtonColor = false
+			btn.ZIndex = 95
+			btn.Parent = contextMenu
+
+			local bCorner = Instance.new("UICorner", btn)
+			bCorner.CornerRadius = UDim.new(0, 5)
+
+			local icon = Instance.new("ImageLabel")
+			icon.Size = UDim2.new(0, 14, 0, 14)
+			icon.Position = UDim2.new(0, 8, 0.5, 0)
+			icon.AnchorPoint = Vector2.new(0, 0.5)
+			icon.BackgroundTransparency = 1
+			icon.Image = opt.Icon
+			icon.ImageColor3 = opt.Color or Color3.fromRGB(255, 255, 255)
+			icon.ImageTransparency = 0.2
+			icon.ZIndex = 96
+			icon.Parent = btn
+
+			local lbl = Instance.new("TextLabel")
+			lbl.Size = UDim2.new(1, -28, 1, 0)
+			lbl.Position = UDim2.new(0, 28, 0, 0)
+			lbl.BackgroundTransparency = 1
+			lbl.Text = opt.Name
+			lbl.Font = getUIFont()
+			lbl.TextSize = 11
+			lbl.TextColor3 = SelectedTheme.TextColor
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.ZIndex = 96
+			lbl.Parent = btn
+
+			btn.MouseEnter:Connect(function()
+				TweenService:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quart), {
+					BackgroundTransparency = 0.35,
+					BackgroundColor3 = SelectedTheme.ElementStroke
+				}):Play()
+				TweenService:Create(icon, TweenInfo.new(0.18, Enum.EasingStyle.Quart), {
+					ImageTransparency = 0
+				}):Play()
+				TweenService:Create(lbl, TweenInfo.new(0.18, Enum.EasingStyle.Quart), {
+					TextColor3 = Color3.fromRGB(255, 255, 255)
+				}):Play()
+			end)
+
+			btn.MouseLeave:Connect(function()
+				TweenService:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quart), {
+					BackgroundTransparency = 1
+				}):Play()
+				TweenService:Create(icon, TweenInfo.new(0.18, Enum.EasingStyle.Quart), {
+					ImageTransparency = 0.2
+				}):Play()
+				TweenService:Create(lbl, TweenInfo.new(0.18, Enum.EasingStyle.Quart), {
+					TextColor3 = SelectedTheme.TextColor
+				}):Play()
+			end)
+
+			btn.MouseButton1Click:Connect(function()
+				closeContextMenu()
+				task.spawn(opt.Callback)
+			end)
+		end
+
+		local mainPos = Main.AbsolutePosition
+		local mainSize = Main.AbsoluteSize
+		local mousePos = UserInputService:GetMouseLocation()
+
+		local targetX = mousePos.X - mainPos.X
+		local targetY = mousePos.Y - mainPos.Y
+
+		if triggerBtn then
+			local btnPos = triggerBtn.AbsolutePosition
+			local btnSize = triggerBtn.AbsoluteSize
+			if targetX < (btnPos.X - mainPos.X - 50) or targetX > (btnPos.X - mainPos.X + btnSize.X + 50) then
+				targetX = btnPos.X - mainPos.X - menuWidth - 4
+				targetY = btnPos.Y - mainPos.Y
+			end
+		end
+
+		local posX = math.clamp(targetX, 10, math.max(10, mainSize.X - menuWidth - 10))
+		local posY = math.clamp(targetY, 10, math.max(10, mainSize.Y - totalHeight - 10))
+
+		contextMenu.Position = UDim2.new(0, posX, 0, posY)
+		contextMenu.Size = UDim2.new(0, menuWidth, 0, totalHeight)
+		contextMenu.BackgroundTransparency = 1
+		cmStroke.Transparency = 1
+		cmScale.Scale = 0.85
+		contextMenu.Visible = true
+		contextOverlay.Visible = true
+
+		TweenService:Create(contextMenu, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 0.05
+		}):Play()
+		TweenService:Create(cmStroke, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Transparency = 0
+		}):Play()
+		TweenService:Create(cmScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Scale = 1
+		}):Play()
+	end
+
+	listFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+		closeContextMenu()
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseWheel and contextMenu.Visible then
+			closeContextMenu()
+		end
+	end)
+
+	local function refreshList()
+		refreshFileListGlobal = refreshList
+		closeContextMenu()
+	    for _, child in ipairs(listFrame:GetChildren()) do
+	        if child:IsA("Frame") then child:Destroy() end
+	    end
+
+	    if currentPath == "" then
+	        backBar.Visible = false
+	        listFrame.Position = UDim2.new(0.5, 0, 0, 50)
+	        listFrame.Size = UDim2.new(1, -10, 1, -54)
+	    else
+	        backBar.Visible = true
+	        curDirLabel.Text = currentPath
+	        listFrame.Position = UDim2.new(0.5, 0, 0, 78)
+	        listFrame.Size = UDim2.new(1, -10, 1, -82)
+	    end
+
+	    local rawList = {}
+	    pcall(function()
+	        if type(listfiles) == "function" then
+	            rawList = listfiles(currentPath) or {}
+	        end
+	    end)
+
+	    local folders = {}
+	    local files = {}
+
+	    for _, p in ipairs(rawList) do
+	        local name = cleanFileName(p)
+	        local isDir = false
+	        pcall(function()
+	            if type(isfolder) == "function" then
+	                isDir = isfolder(p)
+	            end
+	        end)
+
+	        local size = 0
+	        if not isDir then
+	            pcall(function()
+	                if type(readfile) == "function" then
+	                    local content = readfile(p)
+	                    size = content and #content or 0
+	                end
+	            end)
+	            table.insert(files, {Path = p, Name = name, IsFolder = false, Size = size, Ext = getExtension(name)})
+	        else
+	            table.insert(folders, {Path = p, Name = name, IsFolder = true, Size = 0, Ext = "DIR"})
+	        end
+	    end
+
+	    table.sort(folders, function(a, b) return string.lower(a.Name) < string.lower(b.Name) end)
+	    table.sort(files, function(a, b) return string.lower(a.Name) < string.lower(b.Name) end)
+
+	    local currentItems = {}
+	    for _, f in ipairs(folders) do table.insert(currentItems, f) end
+	    for _, f in ipairs(files) do table.insert(currentItems, f) end
+
+	    local filterText = string.lower(searchInput.Text)
+
+	    for i, item in ipairs(currentItems) do
+	        local matches = (filterText == "" or string.find(string.lower(item.Name), filterText, 1, true))
+	        if matches then
+	            local row = Instance.new("Frame")
+	            row.Name = item.Name
+	            row.Size = UDim2.new(1, -4, 0, 34)
+	            row.BackgroundColor3 = (selectedItem and selectedItem.Path == item.Path) and SelectedTheme.DropdownSelected or SelectedTheme.ElementBackground
+	            row.BackgroundTransparency = (selectedItem and selectedItem.Path == item.Path) and 0.2 or 0.65
+	            row.BorderSizePixel = 0
+	            row.LayoutOrder = i
+	            row.Parent = listFrame
+
+	            local rCorner = Instance.new("UICorner", row); rCorner.CornerRadius = UDim.new(0, 6)
+
+	            local iconImg = Instance.new("ImageLabel")
+	            iconImg.Size = UDim2.new(0, 18, 0, 18)
+	            iconImg.Position = UDim2.new(0, 10, 0.5, 0)
+	            iconImg.AnchorPoint = Vector2.new(0, 0.5)
+	            iconImg.BackgroundTransparency = 1
+	            iconImg.ZIndex = 3
+	            if item.IsFolder then
+	                iconImg.Image = folderAsset
+	            else
+	                iconImg.Image = fileAsset
+	            end
+	            iconImg.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	            iconImg.Parent = row
+
+	            local nameLbl = Instance.new("TextLabel")
+	            nameLbl.Text = tostring(i) .. ". " .. item.Name
+	            nameLbl.Font = getUIFont()
+	            nameLbl.TextSize = 12
+	            nameLbl.TextColor3 = SelectedTheme.TextColor
+	            nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+	            nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+	            nameLbl.Position = UDim2.new(0, 36, 0, 0)
+	            nameLbl.Size = UDim2.new(1, -125, 1, 0)
+	            nameLbl.BackgroundTransparency = 1
+	            nameLbl.ZIndex = 3
+	            nameLbl.Parent = row
+
+	            local sizeLbl = Instance.new("TextLabel")
+	            sizeLbl.Text = item.IsFolder and "" or formatSize(item.Size)
+	            sizeLbl.Font = getUIFont()
+	            sizeLbl.TextSize = 11
+	            sizeLbl.TextColor3 = SelectedTheme.TextColor
+	            sizeLbl.TextTransparency = 0.5
+	            sizeLbl.TextXAlignment = Enum.TextXAlignment.Right
+	            sizeLbl.Position = UDim2.new(1, -85, 0, 0)
+	            sizeLbl.Size = UDim2.new(0, 50, 1, 0)
+	            sizeLbl.BackgroundTransparency = 1
+	            sizeLbl.ZIndex = 3
+	            sizeLbl.Parent = row
+
+	            local menuBtn = Instance.new("TextButton")
+	            menuBtn.Name = "MenuBtn"
+	            menuBtn.Size = UDim2.new(0, 24, 0, 24)
+	            menuBtn.Position = UDim2.new(1, -18, 0.5, 0)
+	            menuBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+	            menuBtn.BackgroundColor3 = SelectedTheme.ElementStroke
+	            menuBtn.BackgroundTransparency = 1
+	            menuBtn.Text = "..."
+	            menuBtn.Font = getUIFont()
+	            menuBtn.TextSize = 11
+	            menuBtn.TextColor3 = SelectedTheme.TextColor
+	            menuBtn.TextTransparency = 0.4
+	            menuBtn.AutoButtonColor = false
+	            menuBtn.ZIndex = 5
+	            menuBtn.Parent = row
+	            local mbCorner = Instance.new("UICorner", menuBtn); mbCorner.CornerRadius = UDim.new(0, 4)
+
+	            menuBtn.MouseEnter:Connect(function()
+	                TweenService:Create(menuBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
+	                    BackgroundTransparency = 0.5,
+	                    TextTransparency = 0
+	                }):Play()
+	            end)
+	            menuBtn.MouseLeave:Connect(function()
+	                TweenService:Create(menuBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
+	                    BackgroundTransparency = 1,
+	                    TextTransparency = 0.4
+	                }):Play()
+	            end)
+
+	            menuBtn.MouseButton1Click:Connect(function()
+	                openContextMenu(item, menuBtn)
+	            end)
+
+	            local rowBtn = Instance.new("TextButton")
+	            rowBtn.Name = "RowClickArea"
+	            rowBtn.Size = UDim2.new(1, -36, 1, 0)
+	            rowBtn.Position = UDim2.new(0, 0, 0, 0)
+	            rowBtn.BackgroundTransparency = 1
+	            rowBtn.Text = ""
+	            rowBtn.ZIndex = 2
+	            rowBtn.Parent = row
+
+	            row.MouseEnter:Connect(function()
+	                if not (selectedItem and selectedItem.Path == item.Path) then
+	                    TweenService:Create(row, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.45}):Play()
+	                end
+	            end)
+	            row.MouseLeave:Connect(function()
+	                if not (selectedItem and selectedItem.Path == item.Path) then
+	                    TweenService:Create(row, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.65}):Play()
+	                end
+	            end)
+
+	            rowBtn.MouseButton1Click:Connect(function()
+	                closeContextMenu()
+	                if item.IsFolder then
+	                    currentPath = (currentPath == "") and item.Name or (currentPath .. "/" .. item.Name)
+	                    refreshList()
+	                else
+	                    selectedItem = item
+	                    for _, r in ipairs(listFrame:GetChildren()) do
+	                        if r:IsA("Frame") then
+	                            if r.Name == item.Name then
+	                                r.BackgroundColor3 = SelectedTheme.DropdownSelected
+	                                r.BackgroundTransparency = 0.2
+	                            else
+	                                r.BackgroundColor3 = SelectedTheme.ElementBackground
+	                                r.BackgroundTransparency = 0.65
+	                            end
+	                        end
+	                    end
+	                end
+	            end)
+
+	            rowBtn.MouseButton2Click:Connect(function()
+	                openContextMenu(item, rowBtn)
+	            end)
+	        end
+	    end
+	end
+
+	backBtn.MouseButton1Click:Connect(function()
+	    closeContextMenu()
+	    currentPath = string.gsub(currentPath, "/?[^/]+$", "")
+	    refreshList()
+	end)
+
+	searchInput:GetPropertyChangedSignal("Text"):Connect(function()
+	    closeContextMenu()
+	    refreshList()
+	end)
+
+	local previousTab = nil
+	local TabList = Main.TabList
+
+	filesBtn.MouseButton1Click:Connect(function()
+	    closeContextMenu()
+	    local layout = Elements:FindFirstChildOfClass("UIPageLayout")
+	    if not layout then return end
+
+	    if layout.CurrentPage == workspacePage then
+	        if previousTab and previousTab.Parent == Elements then
+	            layout:JumpTo(previousTab)
+	            for _, tb in ipairs(TabList:GetChildren()) do
+	                if tb.Name == previousTab.Name then
+	                    TweenService:Create(tb, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
+	                    TweenService:Create(tb.Title, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+	                    TweenService:Create(tb.Image, TweenInfo.new(0.3), {ImageTransparency = 0}):Play()
+	                end
+	            end
+	        end
+	    else
+	        previousTab = layout.CurrentPage
+	        for _, tb in ipairs(TabList:GetChildren()) do
+	            if tb.Name ~= "Template" and tb:IsA("Frame") and tb.Name ~= "Placeholder" then
+	                TweenService:Create(tb, TweenInfo.new(0.3), {BackgroundTransparency = 0.7}):Play()
+	                TweenService:Create(tb.Title, TweenInfo.new(0.3), {TextTransparency = 0.2}):Play()
+	                TweenService:Create(tb.Image, TweenInfo.new(0.3), {ImageTransparency = 0.2}):Play()
+	            end
+	        end
+	        layout:JumpTo(workspacePage)
+	        refreshList()
+	    end
+	end)
+
+		Topbar.Hide.MouseButton1Click:Connect(function()
 	setVisibility(Hidden, not useMobileSizing)
 end)
 
@@ -4790,7 +5780,6 @@ for _, TopbarButton in ipairs(Topbar:GetChildren()) do
 	end
 end
 
-
 function RayfieldLibrary:LoadConfiguration()
 	local config
 
@@ -4811,7 +5800,7 @@ function RayfieldLibrary:LoadConfiguration()
 				return
 			end
 
-			if isfile then 
+			if isfile then
 				if callSafely(isfile, ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension) then
 					loaded = LoadConfiguration(callSafely(readfile, ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension))
 				end
@@ -4831,39 +5820,7 @@ function RayfieldLibrary:LoadConfiguration()
 	globalLoaded = true
 end
 
-
-
 if useStudio then
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 end
 
@@ -4873,7 +5830,6 @@ if CEnabled and Main:FindFirstChild('Notice') then
 	Main.Notice.Size = UDim2.new(0, 0, 0, 0)
 	Main.Notice.Position = UDim2.new(0.5, 0, 0, -100)
 	Main.Notice.Visible = true
-
 
 	TweenService:Create(Main.Notice, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 280, 0, 35), Position = UDim2.new(0.5, 0, 0, -50), BackgroundTransparency = 0.5}):Play()
 	TweenService:Create(Main.Notice.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 0.1}):Play()
@@ -4891,4 +5847,3 @@ task.delay(4, function()
 end)
 
 return RayfieldLibrary
-
