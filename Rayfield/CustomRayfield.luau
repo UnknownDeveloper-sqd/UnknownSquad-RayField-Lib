@@ -4,13 +4,71 @@ end
 
 local function getService(name)
 	local service = game:GetService(name)
-	return if cloneref then cloneref(service) else service
+	if cloneref then
+		local ok, ref = pcall(cloneref, service)
+		if ok and ref then
+			return ref
+		end
+	end
+	return service
 end
 
 local UserInputService = getService("UserInputService")
 local TweenService = getService("TweenService")
 local Players = getService("Players")
-local CoreGui = getService("CoreGui")
+local CoreGui = nil
+pcall(function()
+	CoreGui = getService("CoreGui")
+end)
+
+local function safeParentGui(gui)
+	if gethui then
+		local ok, hui = pcall(gethui)
+		if ok and hui then
+			gui.Parent = hui
+			return hui
+		end
+	end
+	if syn and syn.protect_gui and CoreGui then
+		local ok = pcall(function()
+			syn.protect_gui(gui)
+			gui.Parent = CoreGui
+		end)
+		if ok then return CoreGui end
+	end
+	if CoreGui then
+		local ok = pcall(function()
+			local robloxGui = CoreGui:FindFirstChild("RobloxGui")
+			if robloxGui then
+				gui.Parent = robloxGui
+			else
+				gui.Parent = CoreGui
+			end
+		end)
+		if ok then return CoreGui end
+	end
+	local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+	local playerGui = player:WaitForChild("PlayerGui", 5)
+	if playerGui then
+		gui.Parent = playerGui
+		return playerGui
+	end
+	return nil
+end
+
+local function safeCleanOldGui(guiName, currentGui)
+	pcall(function()
+		local container = (gethui and gethui()) or CoreGui or (Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui"))
+		if container then
+			for _, item in ipairs(container:GetChildren()) do
+				if item.Name == guiName and item ~= currentGui then
+					item.Enabled = false
+					item.Name = guiName .. "-Old"
+				end
+			end
+		end
+	end)
+end
 
 local function safeFont(fontName)
 	if type(fontName) ~= "string" then return nil end
@@ -139,8 +197,27 @@ local useStudio = RunService:IsStudio() or false
 
 local settingsCreated = false
 local settingsInitialized = false
-local prompt = useStudio and require(script.Parent.prompt) or loadWithTimeout('https://raw.githubusercontent.com/SiriusSoftwareLtd/Sirius/refs/heads/request/prompt.lua')
-local requestFunc = (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request) or http_request or request
+local rawRequest = (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request) or http_request or request
+local function requestFunc(options)
+	if type(rawRequest) == "function" then
+		local ok, res = pcall(rawRequest, options)
+		if ok and res then
+			return res
+		end
+	end
+	if type(options) == "table" and (options.Method == nil or options.Method == "GET") and options.Url then
+		local ok, body = pcall(game.HttpGet, game, options.Url)
+		if ok and type(body) == "string" then
+			return {
+				StatusCode = 200,
+				StatusMessage = "OK",
+				Body = body,
+				Success = true
+			}
+		end
+	end
+	return nil
+end
 
 if not prompt and not useStudio then
 	prompt = {
@@ -1031,32 +1108,8 @@ until buildAttempts >= 2
 
 Rayfield.Enabled = false
 
-if gethui then
-	Rayfield.Parent = gethui()
-elseif syn and syn.protect_gui then
-	syn.protect_gui(Rayfield)
-	Rayfield.Parent = CoreGui
-elseif not useStudio and CoreGui:FindFirstChild("RobloxGui") then
-	Rayfield.Parent = CoreGui:FindFirstChild("RobloxGui")
-elseif not useStudio then
-	Rayfield.Parent = CoreGui
-end
-
-if gethui then
-	for _, Interface in ipairs(gethui():GetChildren()) do
-		if Interface.Name == Rayfield.Name and Interface ~= Rayfield then
-			Interface.Enabled = false
-			Interface.Name = "Rayfield-Old"
-		end
-	end
-elseif not useStudio then
-	for _, Interface in ipairs(CoreGui:GetChildren()) do
-		if Interface.Name == Rayfield.Name and Interface ~= Rayfield then
-			Interface.Enabled = false
-			Interface.Name = "Rayfield-Old"
-		end
-	end
-end
+safeParentGui(Rayfield)
+safeCleanOldGui(Rayfield.Name, Rayfield)
 
 if secureMode and not customAssetId then
 	secureNotify("default_asset", "Secure Mode", "You are using the default Rayfield asset ID. Set RAYFIELD_ASSET_ID to a custom upload to avoid detection.")
@@ -1149,12 +1202,20 @@ do
 		secureNotify("no_getcustomasset", "Rayfield", "Your executor does not support getcustomasset. Some UI images may not render correctly.")
 	end
 
-	Rayfield.Main.Shadow.Image.Image = customAssets["2"]
-	Rayfield.Main.Topbar.Hide.Image = customAssets["3"]
-	Rayfield.Main.Topbar.ChangeSize.Image = customAssets["4"]
-	Rayfield.Main.Topbar.Settings.Image = customAssets["5"]
-	Rayfield.Main.Topbar.Icon.Image = customAssets["6"]
-	Rayfield.Main.Topbar.Search.Image = customAssets["7"]
+	local function safeApplyImage(obj, assetValue)
+		if obj and assetValue and assetValue ~= "" then
+			pcall(function()
+				obj.Image = assetValue
+			end)
+		end
+	end
+
+	safeApplyImage(Rayfield.Main.Shadow.Image, customAssets["2"])
+	safeApplyImage(Rayfield.Main.Topbar.Hide, customAssets["3"])
+	safeApplyImage(Rayfield.Main.Topbar.ChangeSize, customAssets["4"])
+	safeApplyImage(Rayfield.Main.Topbar.Settings, customAssets["5"])
+	safeApplyImage(Rayfield.Main.Topbar.Icon, customAssets["6"])
+	safeApplyImage(Rayfield.Main.Topbar.Search, customAssets["7"])
 
 	if customAssets["folder"] == nil or customAssets["folder"] == "" then
 		pcall(function()
@@ -1231,7 +1292,11 @@ do
 	FilesBtn.Position = UDim2.new(1, -105, 0.5, 0)
 	FilesBtn.Size = UDim2.new(0, 24, 0, 24)
 	FilesBtn.AnchorPoint = Vector2.new(1, 0.5)
-	FilesBtn.Image = customAssets["folder"] or ""
+	if customAssets["folder"] and customAssets["folder"] ~= "" then
+		FilesBtn.Image = customAssets["folder"]
+	else
+		FilesBtn.Image = "rbxassetid://6034287525"
+	end
 	FilesBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	FilesBtn.ImageTransparency = 0.8
 	FilesBtn.Visible = true
@@ -1241,20 +1306,20 @@ do
 	Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
 	Rayfield.Main.Topbar.Search.ImageRectOffset = Vector2.new(0, 0)
 	Rayfield.Main.Topbar.Search.ImageRectSize = Vector2.new(0, 0)
-	Rayfield.Main.Elements.Template.Toggle.Switch.Shadow.Image = customAssets["8"]
-	Rayfield.Main.Elements.Template.Slider.Main.Shadow.Image = customAssets["8"]
-	Rayfield.Main.Elements.Template.Dropdown.Toggle.Image = customAssets["9"]
+	safeApplyImage(Rayfield.Main.Elements.Template.Toggle.Switch.Shadow, customAssets["8"])
+	safeApplyImage(Rayfield.Main.Elements.Template.Slider.Main.Shadow, customAssets["8"])
+	safeApplyImage(Rayfield.Main.Elements.Template.Dropdown.Toggle, customAssets["9"])
 	Rayfield.Main.Elements.Template.Dropdown.Toggle.ImageRectOffset = Vector2.new(0, 0)
 	Rayfield.Main.Elements.Template.Dropdown.Toggle.ImageRectSize = Vector2.new(0, 0)
-	Rayfield.Main.Elements.Template.Label.Icon.Image = customAssets["10"]
-	Rayfield.Main.Elements.Template.ColorPicker.CPBackground.MainCP.Image = customAssets["11"]
-	Rayfield.Main.Elements.Template.ColorPicker.CPBackground.MainCP.MainPoint.Image = customAssets["12"]
-	Rayfield.Main.Elements.Template.ColorPicker.ColorSlider.SliderPoint.Image = customAssets["12"]
-	Rayfield.Main.TabList.Template.Image.Image = customAssets["13"]
-	Rayfield.Main.Search.Search.Image = customAssets["14"]
-	Rayfield.Main.Search.Shadow.Image = customAssets["2"]
-	Rayfield.Notifications.Template.Icon.Image = customAssets["15"]
-	Rayfield.Notifications.Template.Shadow.Image = customAssets["16"]
+	safeApplyImage(Rayfield.Main.Elements.Template.Label.Icon, customAssets["10"])
+	safeApplyImage(Rayfield.Main.Elements.Template.ColorPicker.CPBackground.MainCP, customAssets["11"])
+	safeApplyImage(Rayfield.Main.Elements.Template.ColorPicker.CPBackground.MainCP.MainPoint, customAssets["12"])
+	safeApplyImage(Rayfield.Main.Elements.Template.ColorPicker.ColorSlider.SliderPoint, customAssets["12"])
+	safeApplyImage(Rayfield.Main.TabList.Template.Image, customAssets["13"])
+	safeApplyImage(Rayfield.Main.Search.Search, customAssets["14"])
+	safeApplyImage(Rayfield.Main.Search.Shadow, customAssets["2"])
+	safeApplyImage(Rayfield.Notifications.Template.Icon, customAssets["15"])
+	safeApplyImage(Rayfield.Notifications.Template.Shadow, customAssets["16"])
 
 	local secTemplate = Rayfield.Main.Elements.Template:FindFirstChild("SectionTitle")
 	if secTemplate then
@@ -1274,38 +1339,17 @@ do
 	if secSpacing then
 		secSpacing.Size = UDim2.new(1, 0, 0, 8)
 	end
-		if type(writefile) == "function" and type(isfile) == "function" then
+	if type(writefile) == "function" and type(isfile) == "function" then
 		pcall(function()
 			ensureFolder(RayfieldFolder)
 			ensureFolder(AssetPath)
 			ensureFolder(ConfigurationFolder)
-			if isfile and isfile("Rayfield_Assets/folder.png") then
-				pcall(writefile, AssetPath .. "/folder.png", readfile("Rayfield_Assets/folder.png"))
-				pcall(writefile, "folder.png", readfile("Rayfield_Assets/folder.png"))
-			elseif isfile and isfile("folder.png") then
-				pcall(writefile, AssetPath .. "/folder.png", readfile("folder.png"))
-			end
-			if isfile and isfile("Rayfield_Assets/file.png") then
-				pcall(writefile, AssetPath .. "/file.png", readfile("Rayfield_Assets/file.png"))
-				pcall(writefile, "file.png", readfile("Rayfield_Assets/file.png"))
-			elseif isfile and isfile("file.png") then
-				pcall(writefile, AssetPath .. "/file.png", readfile("file.png"))
-			end
-			if isfile and isfile("Rayfield_Assets/run.png") then
-				pcall(writefile, AssetPath .. "/run.png", readfile("Rayfield_Assets/run.png"))
-				pcall(writefile, "run.png", readfile("Rayfield_Assets/run.png"))
-			elseif isfile and isfile("run.png") then
-				pcall(writefile, AssetPath .. "/run.png", readfile("run.png"))
-			end
-			if isfile and isfile("Rayfield_Assets/copy.png") then
-				pcall(writefile, AssetPath .. "/copy.png", readfile("Rayfield_Assets/copy.png"))
-				pcall(writefile, "copy.png", readfile("Rayfield_Assets/copy.png"))
-			elseif isfile and isfile("copy.png") then
-				pcall(writefile, AssetPath .. "/copy.png", readfile("copy.png"))
-			end
-			if isfile and isfile("Rayfield_Assets/1.png") then
-				pcall(writefile, AssetPath .. "/1.png", readfile("Rayfield_Assets/1.png"))
-				pcall(writefile, "1.png", readfile("Rayfield_Assets/1.png"))
+			for i = 1, 23 do
+				local fn = tostring(i) .. ".png"
+				if isfile("Rayfield_Assets/" .. fn) then
+					pcall(writefile, AssetPath .. "/" .. fn, readfile("Rayfield_Assets/" .. fn))
+					pcall(writefile, fn, readfile("Rayfield_Assets/" .. fn))
+				end
 			end
 		end)
 	end
@@ -2949,32 +2993,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			KeyUI.Enabled = true
 
-			if gethui then
-				KeyUI.Parent = gethui()
-			elseif syn and syn.protect_gui then
-				syn.protect_gui(KeyUI)
-				KeyUI.Parent = CoreGui
-			elseif not useStudio and CoreGui:FindFirstChild("RobloxGui") then
-				KeyUI.Parent = CoreGui:FindFirstChild("RobloxGui")
-			elseif not useStudio then
-				KeyUI.Parent = CoreGui
-			end
-
-			if gethui then
-				for _, Interface in ipairs(gethui():GetChildren()) do
-					if Interface.Name == KeyUI.Name and Interface ~= KeyUI then
-						Interface.Enabled = false
-						Interface.Name = "KeyUI-Old"
-					end
-				end
-			elseif not useStudio then
-				for _, Interface in ipairs(CoreGui:GetChildren()) do
-					if Interface.Name == KeyUI.Name and Interface ~= KeyUI then
-						Interface.Enabled = false
-						Interface.Name = "KeyUI-Old"
-					end
-				end
-			end
+			safeParentGui(KeyUI)
+			safeCleanOldGui(KeyUI.Name, KeyUI)
 
 			local KeyMain = KeyUI.Main
 			KeyMain.Title.Text = Settings.KeySettings.Title or Settings.Name
@@ -5304,15 +5324,22 @@ end
 					refreshList()
 				end
 			})
+			local function safeSetClipboard(text)
+				pcall(function()
+					local cb = setclipboard or toclipboard
+					if type(cb) == "function" then
+						cb(text)
+					end
+				end)
+			end
+
 			table.insert(options, {
 				Name = "Copy Path",
 				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
-					if type(setclipboard) == "function" then
-						setclipboard(item.Path)
-						RayfieldLibrary:Notify({Title = "Copied", Content = "Folder path copied to clipboard", Duration = 2})
-					end
+					safeSetClipboard(item.Path)
+					RayfieldLibrary:Notify({Title = "Copied", Content = "Folder path copied to clipboard", Duration = 2})
 				end
 			})
 			table.insert(options, {
@@ -5320,10 +5347,8 @@ end
 				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
-					if type(setclipboard) == "function" then
-						setclipboard(item.Name)
-						RayfieldLibrary:Notify({Title = "Copied", Content = "Folder name copied to clipboard", Duration = 2})
-					end
+					safeSetClipboard(item.Name)
+					RayfieldLibrary:Notify({Title = "Copied", Content = "Folder name copied to clipboard", Duration = 2})
 				end
 			})
 		else
@@ -5348,8 +5373,9 @@ end
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
 					pcall(function()
-						if type(setclipboard) == "function" and type(readfile) == "function" then
-							setclipboard(readfile(item.Path))
+						local cb = setclipboard or toclipboard
+						if type(cb) == "function" and type(readfile) == "function" then
+							cb(readfile(item.Path))
 							RayfieldLibrary:Notify({Title = "Copied", Content = "File content copied to clipboard", Duration = 2})
 						end
 					end)
@@ -5361,10 +5387,13 @@ end
 				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
-					if type(setclipboard) == "function" then
-						setclipboard(item.Path)
-						RayfieldLibrary:Notify({Title = "Copied", Content = "Path copied to clipboard", Duration = 2})
-					end
+					pcall(function()
+						local cb = setclipboard or toclipboard
+						if type(cb) == "function" then
+							cb(item.Path)
+							RayfieldLibrary:Notify({Title = "Copied", Content = "Path copied to clipboard", Duration = 2})
+						end
+					end)
 				end
 			})
 
@@ -5373,10 +5402,13 @@ end
 				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
-					if type(setclipboard) == "function" then
-						setclipboard(item.Name)
-						RayfieldLibrary:Notify({Title = "Copied", Content = "File name copied to clipboard", Duration = 2})
-					end
+					pcall(function()
+						local cb = setclipboard or toclipboard
+						if type(cb) == "function" then
+							cb(item.Name)
+							RayfieldLibrary:Notify({Title = "Copied", Content = "File name copied to clipboard", Duration = 2})
+						end
+					end)
 				end
 			})
 		end
