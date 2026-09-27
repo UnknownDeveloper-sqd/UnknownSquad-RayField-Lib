@@ -5363,10 +5363,12 @@ end
 		if item.IsFolder then
 			table.insert(options, {
 				Name = "Open Folder",
-				Icon = folderAsset,
+				Icon = (folderAsset and folderAsset ~= "") and folderAsset or "rbxassetid://6034287525",
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
-					currentPath = (currentPath == "") and item.Name or (currentPath .. "/" .. item.Name)
+					local targetPath = string.gsub(item.Path or item.Name, "\\", "/")
+					targetPath = string.gsub(targetPath, "^[./\\]+", "")
+					currentPath = targetPath
 					refreshList()
 				end
 			})
@@ -5486,6 +5488,7 @@ end
 			icon.ImageColor3 = opt.Color or Color3.fromRGB(255, 255, 255)
 			icon.ImageTransparency = 0.2
 			icon.ZIndex = 96
+			icon.Active = false
 			icon.Parent = btn
 
 			local lbl = Instance.new("TextLabel")
@@ -5498,6 +5501,7 @@ end
 			lbl.TextColor3 = SelectedTheme.TextColor
 			lbl.TextXAlignment = Enum.TextXAlignment.Left
 			lbl.ZIndex = 96
+			lbl.Active = false
 			lbl.Parent = btn
 
 			btn.MouseEnter:Connect(function()
@@ -5525,10 +5529,12 @@ end
 				}):Play()
 			end)
 
-			btn.MouseButton1Click:Connect(function()
+			local function handleAction()
 				closeContextMenu()
 				task.spawn(opt.Callback)
-			end)
+			end
+			btn.Activated:Connect(handleAction)
+			btn.MouseButton1Click:Connect(handleAction)
 		end
 
 		local mainPos = Main.AbsolutePosition
@@ -5720,7 +5726,7 @@ end
 	            iconImg.Parent = row
 
 	            local nameLbl = Instance.new("TextLabel")
-	            nameLbl.Text = tostring(i) .. ". " .. item.Name
+	            nameLbl.Text = item.Name
 	            nameLbl.Font = getUIFont()
 	            nameLbl.TextSize = 12
 	            nameLbl.TextColor3 = SelectedTheme.TextColor
@@ -5799,10 +5805,12 @@ end
 	                end
 	            end)
 
-	            rowBtn.MouseButton1Click:Connect(function()
+	            local function onRowClicked()
 	                closeContextMenu()
 	                if item.IsFolder then
-	                    currentPath = (currentPath == "") and item.Name or (currentPath .. "/" .. item.Name)
+	                    local targetPath = string.gsub(item.Path or item.Name, "\\", "/")
+	                    targetPath = string.gsub(targetPath, "^[./\\]+", "")
+	                    currentPath = targetPath
 	                    refreshList()
 	                else
 	                    selectedItem = item
@@ -5818,7 +5826,9 @@ end
 	                        end
 	                    end
 	                end
-	            end)
+	            end
+	            rowBtn.Activated:Connect(onRowClicked)
+	            rowBtn.MouseButton1Click:Connect(onRowClicked)
 
 	            rowBtn.MouseButton2Click:Connect(function()
 	                openContextMenu(item, rowBtn)
@@ -5827,11 +5837,14 @@ end
 	    end
 	end
 
-	backBtn.MouseButton1Click:Connect(function()
+	local function goBack()
 	    closeContextMenu()
-	    currentPath = string.gsub(currentPath, "/?[^/]+$", "")
+	    currentPath = string.gsub(currentPath, "[/\\]?[^/\\]+$", "")
+	    currentPath = string.gsub(currentPath, "^[./\\]+", "")
 	    refreshList()
-	end)
+	end
+	backBtn.Activated:Connect(goBack)
+	backBtn.MouseButton1Click:Connect(goBack)
 
 	searchInput:GetPropertyChangedSignal("Text"):Connect(function()
 	    closeContextMenu()
