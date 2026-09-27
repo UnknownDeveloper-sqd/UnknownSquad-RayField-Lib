@@ -1132,7 +1132,6 @@ until buildAttempts >= 2
 Rayfield.Enabled = false
 
 safeParentGui(Rayfield)
-safeCleanOldGui(Rayfield.Name, Rayfield)
 
 if secureMode and not customAssetId then
 	secureNotify("default_asset", "Secure Mode", "You are using the default Rayfield asset ID. Set RAYFIELD_ASSET_ID to a custom upload to avoid detection.")
@@ -2814,6 +2813,12 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 	ensureFolder(RayfieldFolder)
 
+	local windowSafeName = "Rayfield_" .. (Settings.Name and string.gsub(Settings.Name, "[^%w_]+", "") or "Window")
+	Rayfield.Name = windowSafeName
+	if Settings.DisableOld ~= false then
+		safeCleanOldGui(windowSafeName, Rayfield)
+	end
+
 	local Passthrough = false
 	Topbar.Title.Text = Settings.Name
 
@@ -3032,10 +3037,10 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Rayfield.Enabled = false
 			local KeyUI = useStudio and script.Parent:FindFirstChild('Key') or game:GetObjects("rbxassetid://11380036235")[1]
 
-			KeyUI.Enabled = true
-
+			local keySafeName = "KeyUI_" .. (Settings.Name and string.gsub(Settings.Name, "[^%w_]+", "") or "Window")
+			KeyUI.Name = keySafeName
 			safeParentGui(KeyUI)
-			safeCleanOldGui(KeyUI.Name, KeyUI)
+			safeCleanOldGui(keySafeName, KeyUI)
 
 			local KeyMain = KeyUI.Main
 			KeyMain.Title.Text = Settings.KeySettings.Title or Settings.Name
@@ -5578,7 +5583,9 @@ end
 		refreshFileListGlobal = refreshList
 		closeContextMenu()
 	    for _, child in ipairs(listFrame:GetChildren()) do
-	        if child:IsA("Frame") then child:Destroy() end
+	        if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+	            child:Destroy()
+	        end
 	    end
 
 	    if currentPath == "" then
@@ -5593,9 +5600,29 @@ end
 	    end
 
 	    local rawList = {}
+	    local listErr = nil
 	    pcall(function()
-	        if type(listfiles) == "function" then
-	            rawList = listfiles(currentPath) or {}
+	        local listFunc = listfiles or (getgenv and getgenv().listfiles) or (syn and syn.listfiles) or (fluxus and fluxus.listfiles)
+	        if type(listFunc) == "function" then
+	            local ok, res
+	            if currentPath == "" then
+	                ok, res = pcall(listFunc, "")
+	                if not ok or type(res) ~= "table" then
+	                    ok, res = pcall(listFunc)
+	                end
+	                if not ok or type(res) ~= "table" then
+	                    ok, res = pcall(listFunc, ".")
+	                end
+	            else
+	                ok, res = pcall(listFunc, currentPath)
+	            end
+	            if ok and type(res) == "table" then
+	                rawList = res
+	            elseif not ok then
+	                listErr = tostring(res)
+	            end
+	        else
+	            listErr = "Filesystem not supported by executor"
 	        end
 	    end)
 
@@ -5605,17 +5632,27 @@ end
 	    for _, p in ipairs(rawList) do
 	        local name = cleanFileName(p)
 	        local isDir = false
+	        local isfolderFunc = isfolder or (getgenv and getgenv().isfolder) or (syn and syn.isfolder)
+	        local isfileFunc = isfile or (getgenv and getgenv().isfile) or (syn and syn.isfile)
 	        pcall(function()
-	            if type(isfolder) == "function" then
-	                isDir = isfolder(p)
+	            if type(isfolderFunc) == "function" then
+	                isDir = isfolderFunc(p) == true
 	            end
 	        end)
+	        if not isDir and type(isfileFunc) == "function" then
+	            pcall(function()
+	                if isfileFunc(p) == false and getExtension(name) == "" then
+	                    isDir = true
+	                end
+	            end)
+	        end
 
 	        local size = 0
 	        if not isDir then
 	            pcall(function()
-	                if type(readfile) == "function" then
-	                    local content = readfile(p)
+	                local readFunc = readfile or (getgenv and getgenv().readfile) or (syn and syn.readfile)
+	                if type(readFunc) == "function" then
+	                    local content = readFunc(p)
 	                    size = content and #content or 0
 	                end
 	            end)
@@ -5633,6 +5670,26 @@ end
 	    for _, f in ipairs(files) do table.insert(currentItems, f) end
 
 	    local filterText = string.lower(searchInput.Text)
+
+	    if #currentItems == 0 then
+	        local emptyLabel = Instance.new("TextLabel")
+	        emptyLabel.Name = "EmptyStatus"
+	        emptyLabel.Size = UDim2.new(1, -20, 0, 40)
+	        emptyLabel.Position = UDim2.new(0.5, 0, 0, 15)
+	        emptyLabel.AnchorPoint = Vector2.new(0.5, 0)
+	        emptyLabel.BackgroundTransparency = 1
+	        emptyLabel.Font = getUIFont()
+	        emptyLabel.TextSize = 12
+	        emptyLabel.TextColor3 = SelectedTheme.TextColor
+	        emptyLabel.TextTransparency = 0.4
+	        emptyLabel.TextXAlignment = Enum.TextXAlignment.Center
+	        if listErr then
+	            emptyLabel.Text = "Filesystem: " .. tostring(listErr)
+	        else
+	            emptyLabel.Text = (filterText ~= "") and "No matching files" or "No files in workspace"
+	        end
+	        emptyLabel.Parent = listFrame
+	    end
 
 	    for i, item in ipairs(currentItems) do
 	        local matches = (filterText == "" or string.find(string.lower(item.Name), filterText, 1, true))
@@ -5655,9 +5712,9 @@ end
 	            iconImg.BackgroundTransparency = 1
 	            iconImg.ZIndex = 3
 	            if item.IsFolder then
-	                iconImg.Image = folderAsset
+	                iconImg.Image = (folderAsset and folderAsset ~= "") and folderAsset or "rbxassetid://6034287525"
 	            else
-	                iconImg.Image = fileAsset
+	                iconImg.Image = (fileAsset and fileAsset ~= "") and fileAsset or "rbxassetid://6034287527"
 	            end
 	            iconImg.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	            iconImg.Parent = row
