@@ -24,9 +24,9 @@ end)
 local function safeParentGui(gui)
 	if gethui then
 		local ok, hui = pcall(gethui)
-		if ok and hui then
-			gui.Parent = hui
-			return hui
+		if ok and hui and typeof(hui) == "Instance" then
+			local parentOk = pcall(function() gui.Parent = hui end)
+			if parentOk then return hui end
 		end
 	end
 	if syn and syn.protect_gui and CoreGui then
@@ -47,56 +47,82 @@ local function safeParentGui(gui)
 		end)
 		if ok then return CoreGui end
 	end
-	local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-	local playerGui = player:WaitForChild("PlayerGui", 5)
-	if playerGui then
-		gui.Parent = playerGui
-		return playerGui
+	local player = nil
+	pcall(function()
+		player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+	end)
+	if player then
+		local playerGui = nil
+		pcall(function()
+			playerGui = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui", 5)
+		end)
+		if playerGui then
+			local ok = pcall(function() gui.Parent = playerGui end)
+			if ok then return playerGui end
+		end
 	end
 	return nil
 end
 
 local function safeCleanOldGui(guiName, currentGui)
 	pcall(function()
-		local container = (gethui and gethui()) or CoreGui or (Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui"))
-		if container then
-			for _, item in ipairs(container:GetChildren()) do
-				if item.Name == guiName and item ~= currentGui then
-					item.Enabled = false
-					item.Name = guiName .. "-Old"
+		local containers = {}
+		if gethui then
+			local ok, hui = pcall(gethui)
+			if ok and hui then table.insert(containers, hui) end
+		end
+		if CoreGui then
+			pcall(function()
+				local r = CoreGui:GetChildren()
+				if r then table.insert(containers, CoreGui) end
+			end)
+		end
+		if Players.LocalPlayer then
+			pcall(function()
+				local pg = Players.LocalPlayer:FindFirstChild("PlayerGui")
+				if pg then table.insert(containers, pg) end
+			end)
+		end
+		for _, container in ipairs(containers) do
+			pcall(function()
+				for _, item in ipairs(container:GetChildren()) do
+					if item.Name == guiName and item ~= currentGui then
+						item.Enabled = false
+						item.Name = guiName .. "-Old"
+					end
 				end
-			end
+			end)
 		end
 	end)
 end
 
 local function safeFont(fontName)
-	if type(fontName) ~= "string" then return nil end
+	if type(fontName) ~= "string" then return Enum.Font.Gotham end
 	local success, font = pcall(function()
 		return Enum.Font[fontName]
 	end)
-	return success and font or nil
+	return (success and font) or Enum.Font.Gotham
 end
 
 local function loadWithTimeout(url: string, timeout: number?): ...any
-	assert(type(url) == "string", "Expected string, got " .. type(url))
+	if type(url) ~= "string" or #url == 0 then return nil end
 	timeout = timeout or 5
 	local requestCompleted = false
 	local success, result = false, nil
 
 	local requestThread = task.spawn(function()
 		local fetchSuccess, fetchResult = pcall(game.HttpGet, game, url)
-		if not fetchSuccess or #fetchResult == 0 then
-			if #fetchResult == 0 then
-				fetchResult = "Empty response"
-			end
-			success, result = false, fetchResult
+		if not fetchSuccess or type(fetchResult) ~= "string" or #fetchResult == 0 then
+			success, result = false, "Empty or failed response"
 			requestCompleted = true
 			return
 		end
-		local content = fetchResult
 		local execSuccess, execResult = pcall(function()
-			return loadstring(content)()
+			local fn = loadstring(fetchResult)
+			if type(fn) == "function" then
+				return fn()
+			end
+			return nil
 		end)
 		success, result = execSuccess, execResult
 		requestCompleted = true
@@ -104,19 +130,18 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 
 	local timeoutThread = task.delay(timeout, function()
 		if not requestCompleted then
-			task.cancel(requestThread)
+			pcall(task.cancel, requestThread)
 			result = "Request timed out"
 			requestCompleted = true
 		end
 	end)
 
-	while not requestCompleted do
-		task.wait()
+	local startWait = tick()
+	while not requestCompleted and (tick() - startWait) < (timeout + 0.5) do
+		task.wait(0.05)
 	end
 	if coroutine.status(timeoutThread) ~= "dead" then
-		task.cancel(timeoutThread)
-	end
-	if not success then
+		pcall(task.cancel, timeoutThread)
 	end
 	return if success then result else nil
 end
@@ -219,11 +244,9 @@ local function requestFunc(options)
 	return nil
 end
 
-if not prompt and not useStudio then
-	prompt = {
-		create = function() end
-	}
-end
+local prompt = {
+	create = function() end
+}
 
 local function callSafely(func, ...)
 	if func then
@@ -1181,7 +1204,8 @@ do
 					end
 				end)
 
-				while nextToFetch() do
+				local fetchWaitStart = tick()
+				while nextToFetch() and (tick() - fetchWaitStart) < 4 do
 					task.wait(0.1)
 				end
 			end
@@ -1453,7 +1477,14 @@ end
 Rayfield.DisplayOrder = 100
 LoadingFrame.Version.Text = Release
 
-local Icons = useStudio and require(script.Parent.icons) or loadWithTimeout('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/icons.lua')
+local Icons = nil
+pcall(function()
+	if useStudio then
+		Icons = require(script.Parent.icons)
+	else
+		Icons = loadWithTimeout('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/icons.lua', 3)
+	end
+end)
 
 local CFileName = nil
 local CEnabled = false
@@ -1612,13 +1643,19 @@ local function ChangeTheme(Theme)
 end
 
 local function getIcon(name : string): {id: number, imageRectSize: Vector2, imageRectOffset: Vector2}
-	if not Icons then
-		return
+	if not Icons or type(Icons) ~= "table" then
+		return nil
 	end
 	name = string.match(string.lower(name), "^%s*(.*)%s*$") :: string
-	local sizedicons = Icons['48px']
+	local sizedicons = nil
+	pcall(function()
+		sizedicons = Icons['48px']
+	end)
+	if type(sizedicons) ~= "table" then
+		return nil
+	end
 	local r = sizedicons[name]
-	if not r then
+	if not r or type(r) ~= "table" then
 		return nil
 	end
 
@@ -1670,7 +1707,11 @@ local function resolveIcon(icon)
 
 	if typeof(icon) == "string" and Icons then
 		local asset = getIcon(icon)
-		return "rbxassetid://" .. asset.id, asset.imageRectOffset, asset.imageRectSize
+		if asset and asset.id then
+			return "rbxassetid://" .. asset.id, asset.imageRectOffset, asset.imageRectSize
+		else
+			return getAssetUri(icon), nil, nil
+		end
 	else
 		return getAssetUri(icon), nil, nil
 	end
