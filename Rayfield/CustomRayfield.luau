@@ -1,6 +1,10 @@
 
-if debugX then
-end
+local debugX = false
+local _env = (getgenv and getgenv()) or _G
+local syn = (type(_env) == "table" and _env.syn) or rawget(_G, "syn")
+local fluxus = (type(_env) == "table" and _env.fluxus) or rawget(_G, "fluxus")
+local currentWindowSettings = nil
+local allLibraryConnections = {}
 
 local function getService(name)
 	local service = game:GetService(name)
@@ -86,9 +90,9 @@ local function safeCleanOldGui(guiName, currentGui)
 		for _, container in ipairs(containers) do
 			pcall(function()
 				for _, item in ipairs(container:GetChildren()) do
-					if item.Name == guiName and item ~= currentGui then
+					if (item.Name == guiName or item.Name == guiName .. "-Old") and item ~= currentGui then
 						item.Enabled = false
-						item.Name = guiName .. "-Old"
+						pcall(function() item:Destroy() end)
 					end
 				end
 			end)
@@ -106,7 +110,7 @@ end
 
 local function loadWithTimeout(url: string, timeout: number?): ...any
 	if type(url) ~= "string" or #url == 0 then return nil end
-	timeout = timeout or 5
+	local safeTimeout: number = timeout or 5
 	local requestCompleted = false
 	local success, result = false, nil
 
@@ -128,7 +132,7 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 		requestCompleted = true
 	end)
 
-	local timeoutThread = task.delay(timeout, function()
+	local timeoutThread = task.delay(safeTimeout, function()
 		if not requestCompleted then
 			pcall(task.cancel, requestThread)
 			result = "Request timed out"
@@ -137,7 +141,7 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 	end)
 
 	local startWait = tick()
-	while not requestCompleted and (tick() - startWait) < (timeout + 0.5) do
+	while not requestCompleted and (tick() - startWait) < (safeTimeout + 0.5) do
 		task.wait(0.05)
 	end
 	if coroutine.status(timeoutThread) ~= "dead" then
@@ -158,15 +162,9 @@ if getgenv then
 	if ok3 and result3 then secureMode = true end
 end
 
-if secureMode then
-	local _error = error
-	local _assert = assert
-	warn = function(...) end
-	print = function(...) end
-	error = function(_, level) _error("", level) end
-	assert = function(v, ...) return _assert(v) end
-end
+local warn = if secureMode then function(...) end else warn
 
+local RayfieldLibrary
 local secureWarnings = {}
 local customAssets = {}
 
@@ -206,9 +204,10 @@ end
 local function getSetting(category: string, name: string): any
 	if overriddenSettings[category .. "." .. name] ~= nil then
 		return overriddenSettings[category .. "." .. name]
-	elseif settingsTable[category][name] ~= nil then
+	elseif settingsTable[category] and settingsTable[category][name] ~= nil then
 		return settingsTable[category][name].Value
 	end
+	return nil
 end
 
 if requestsDisabled then
@@ -245,7 +244,7 @@ local function requestFunc(options)
 end
 
 local prompt = {
-	create = function() end
+	create = function(...) end
 }
 
 local function callSafely(func, ...)
@@ -257,6 +256,7 @@ local function callSafely(func, ...)
 			return result
 		end
 	end
+	return nil
 end
 
 local function ensureFolder(folderPath)
@@ -268,7 +268,7 @@ end
 local function loadSettings()
 	local file = nil
 
-	local success, result =	pcall(function()
+	local success = pcall(function()
 		if callSafely(isfolder, RayfieldFolder) then
 			if callSafely(isfile, RayfieldFolder..'/settings'..ConfigurationExtension) then
 				file = callSafely(readfile, RayfieldFolder..'/settings'..ConfigurationExtension)
@@ -355,11 +355,7 @@ if not requestsDisabled and not useStudio then
 	end
 end
 
-if not useStudio and math.random(10) == 1 then
-	task.spawn(function()
-		pcall((game :: any).HttpGet, game, "https://www.sentivel.com/api/heartbeat/81074364b461f8da81bad6fdc363c3b927f884d6fc28d806a15ee50ca1e68c78")
-	end)
-end
+-- Telemetry heartbeat removed
 
 local promptUser = 2
 
@@ -380,7 +376,7 @@ end
 if debugX then
 end
 
-local RayfieldLibrary = {
+RayfieldLibrary = {
 	Flags = {},
 	Theme = {
 		Default = {
@@ -771,7 +767,7 @@ local RayfieldLibrary = {
 			TabStroke = Color3.fromRGB(255, 0, 110),
 			TabBackgroundSelected = Color3.fromRGB(255, 0, 110),
 			TabTextColor = Color3.fromRGB(240, 240, 255),
-			SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+			SelectedTabTextColor = Color3.fromRGB(20, 15, 25),
 			ElementBackground = Color3.fromRGB(25, 20, 48),
 			ElementBackgroundHover = Color3.fromRGB(35, 28, 65),
 			SecondaryElementBackground = Color3.fromRGB(20, 15, 38),
@@ -839,7 +835,7 @@ local RayfieldLibrary = {
 			TabStroke = Color3.fromRGB(35, 75, 58),
 			TabBackgroundSelected = Color3.fromRGB(16, 185, 129),
 			TabTextColor = Color3.fromRGB(210, 240, 225),
-			SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+			SelectedTabTextColor = Color3.fromRGB(10, 40, 25),
 			ElementBackground = Color3.fromRGB(18, 35, 28),
 			ElementBackgroundHover = Color3.fromRGB(24, 46, 37),
 			SecondaryElementBackground = Color3.fromRGB(14, 28, 22),
@@ -1043,7 +1039,7 @@ local RayfieldLibrary = {
 			TabStroke = Color3.fromRGB(32, 50, 85),
 			TabBackgroundSelected = Color3.fromRGB(59, 130, 246),
 			TabTextColor = Color3.fromRGB(210, 225, 250),
-			SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+			SelectedTabTextColor = Color3.fromRGB(10, 20, 35),
 			ElementBackground = Color3.fromRGB(16, 24, 42),
 			ElementBackgroundHover = Color3.fromRGB(22, 34, 58),
 			SecondaryElementBackground = Color3.fromRGB(12, 18, 32),
@@ -1103,28 +1099,44 @@ local RayfieldLibrary = {
 }
 
 local RayfieldAssetId = customAssetId or 10804731440
-local Rayfield = useStudio and script.Parent:FindFirstChild('Rayfield') or game:GetObjects("rbxassetid://"..RayfieldAssetId)[1]
+local function loadRayfieldGui()
+	if useStudio and script and script.Parent then
+		local found = script.Parent:FindFirstChild('Rayfield')
+		if found then return found end
+	end
+	local ok, objects = pcall(function()
+		return game:GetObjects("rbxassetid://"..RayfieldAssetId)
+	end)
+	if ok and type(objects) == "table" then
+		return objects[1]
+	end
+	return nil
+end
+
+local Rayfield = loadRayfieldGui()
+assert(Rayfield, "Rayfield: failed to load interface asset "..tostring(RayfieldAssetId))
 local buildAttempts = 0
-local correctBuild = false
+local _correctBuild = false
 local warned
 local globalLoaded
 local rayfieldDestroyed = false
 
 repeat
 	if Rayfield:FindFirstChild('Build') and Rayfield.Build.Value == InterfaceBuild then
-		correctBuild = true
+		_correctBuild = true
 		break
 	end
 
-	correctBuild = false
+	_correctBuild = false
 
 	if not warned then
 		warned = true
 	end
 
 	local toDestroy
-	toDestroy, Rayfield = Rayfield, useStudio and script.Parent:FindFirstChild('Rayfield') or game:GetObjects("rbxassetid://"..RayfieldAssetId)[1]
-	if toDestroy and not useStudio then toDestroy:Destroy() end
+	local newGui = loadRayfieldGui()
+	toDestroy, Rayfield = Rayfield, newGui or Rayfield
+	if toDestroy and toDestroy ~= Rayfield and not useStudio then toDestroy:Destroy() end
 
 	buildAttempts = buildAttempts + 1
 until buildAttempts >= 2
@@ -1138,7 +1150,7 @@ if secureMode and not customAssetId then
 end
 
 do
-	local AssetPath = RayfieldFolder.."/Assets"
+	AssetPath = RayfieldFolder.."/Assets"
 	local AssetBaseURL = "https://raw.githubusercontent.com/UnknownDeveloper-sqd/UnknownSquad-RayField-Lib/main/Assets/"
 
 	local assetFiles = {
@@ -1175,7 +1187,7 @@ do
 	local hasFilesystem = type(writefile) == "function" and type(makefolder) == "function" and type(isfile) == "function" and type(isfolder) == "function"
 
 	if hasCustomAsset and hasFilesystem then
-		local ok, err = pcall(function()
+		local ok = pcall(function()
 			ensureFolder(RayfieldFolder)
 			ensureFolder(AssetPath)
 
@@ -1449,6 +1461,8 @@ end
 
 local globalWidthSlider = nil
 local globalHeightSlider = nil
+local widthSlider = nil
+local heightSlider = nil
 
 local function applySize(newW, newH, smooth)
 	if not Main then return end
@@ -1489,8 +1503,9 @@ LoadingFrame.Version.Text = Release
 
 local Icons = nil
 pcall(function()
-	if useStudio then
-		Icons = require(script.Parent.icons)
+	if useStudio and script and script.Parent then
+		local iconModule = script.Parent:FindFirstChild("icons")
+		if iconModule and iconModule:IsA("ModuleScript") then Icons = require(iconModule) end
 	else
 		Icons = loadWithTimeout('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/icons.lua', 3)
 	end
@@ -1508,6 +1523,7 @@ local keybindConnections = {}
 local SelectedTheme = RayfieldLibrary.Theme.Default
 local currentUIFont = Enum.Font.Gotham
 local refreshFileListGlobal = nil
+local updateFileExplorerTheme: (() -> ())? = nil
 
 local function ChangeTheme(Theme)
 	if typeof(Theme) == 'string' then
@@ -1569,11 +1585,12 @@ local function ChangeTheme(Theme)
 		end
 	end
 
-	Main.Search.BackgroundColor3 = SelectedTheme.TextColor
-	Main.Search.Shadow.ImageColor3 = SelectedTheme.TextColor
+	Main.Search.BackgroundColor3 = SelectedTheme.InputBackground or SelectedTheme.Background
+	Main.Search.Shadow.ImageColor3 = SelectedTheme.Shadow
 	Main.Search.Search.ImageColor3 = SelectedTheme.TextColor
-	Main.Search.Input.PlaceholderColor3 = SelectedTheme.TextColor
-	Main.Search.UIStroke.Color = SelectedTheme.SecondaryElementStroke
+	Main.Search.Input.PlaceholderColor3 = SelectedTheme.PlaceholderColor or Color3.fromRGB(140, 140, 150)
+	Main.Search.Input.TextColor3 = SelectedTheme.TextColor
+	Main.Search.UIStroke.Color = SelectedTheme.SecondaryElementStroke or SelectedTheme.ElementStroke
 
 	if Main:FindFirstChild('Notice') then
 		Main.Notice.BackgroundColor3 = SelectedTheme.Background
@@ -1591,47 +1608,126 @@ local function ChangeTheme(Theme)
 	end
 
 	for _, TabPage in ipairs(Elements:GetChildren()) do
-		for _, Element in ipairs(TabPage:GetChildren()) do
-			if Element.ClassName == "Frame" and Element.Name ~= "Placeholder" and Element.Name ~= "SectionSpacing" and Element.Name ~= "Divider" and Element.Name ~= "SectionTitle" and Element.Name ~= "SearchTitle-fsefsefesfsefesfesfThanks" then
-				TweenService:Create(Element, anim, {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-				if Element:FindFirstChild('UIStroke') then
-					TweenService:Create(Element.UIStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
-				end
+		if TabPage.Name ~= "Workspace" and (TabPage:IsA("ScrollingFrame") or TabPage:IsA("Frame")) then
+			if TabPage:IsA("ScrollingFrame") then
+				TabPage.ScrollBarImageColor3 = SelectedTheme.ElementStroke
+			end
+			for _, Element in ipairs(TabPage:GetChildren()) do
+				if Element:IsA("Frame") and Element.Name ~= "Placeholder" and Element.Name ~= "SectionSpacing" and Element.Name ~= "Divider" and Element.Name ~= "SearchTitle-fsefsefesfsefesfesfThanks" then
+					if Element.Name == "SectionTitle" then
+						if Element:FindFirstChild('Title') then
+							Element.Title.TextColor3 = SelectedTheme.TextColor
+						end
+					else
+						TweenService:Create(Element, anim, {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+						if Element:FindFirstChild('UIStroke') then
+							TweenService:Create(Element.UIStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
+						end
+						if Element:FindFirstChild('Title') and Element.Title:IsA("TextLabel") then
+							Element.Title.TextColor3 = SelectedTheme.TextColor
+						end
+						if Element:FindFirstChild('ElementIndicator') then
+							Element.ElementIndicator.TextColor3 = SelectedTheme.TextColor
+						end
 
-				local list = Element:FindFirstChild('List')
-				if list then
-					local selectedText = Element:FindFirstChild('Selected') and Element.Selected.Text or ""
-					for _, opt in ipairs(list:GetChildren()) do
-						if opt.ClassName == "Frame" and opt.Name ~= "Placeholder" then
-							if opt.Name == selectedText then
-								TweenService:Create(opt, anim, {BackgroundColor3 = SelectedTheme.DropdownSelected}):Play()
-							else
-								TweenService:Create(opt, anim, {BackgroundColor3 = SelectedTheme.DropdownUnselected}):Play()
+						local list = Element:FindFirstChild('List')
+						if list then
+							local selectedText = Element:FindFirstChild('Selected') and Element.Selected.Text or ""
+							if Element:FindFirstChild('Selected') then
+								Element.Selected.TextColor3 = SelectedTheme.TextColor
 							end
-							if opt:FindFirstChild('UIStroke') then
-								TweenService:Create(opt.UIStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
+							if Element:FindFirstChild('Toggle') then
+								Element.Toggle.ImageColor3 = SelectedTheme.TextColor
+							end
+							for _, opt in ipairs(list:GetChildren()) do
+								if opt.ClassName == "Frame" and opt.Name ~= "Placeholder" then
+									if opt.Name == selectedText then
+										TweenService:Create(opt, anim, {BackgroundColor3 = SelectedTheme.DropdownSelected}):Play()
+									else
+										TweenService:Create(opt, anim, {BackgroundColor3 = SelectedTheme.DropdownUnselected}):Play()
+									end
+									if opt:FindFirstChild('UIStroke') then
+										TweenService:Create(opt.UIStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
+									end
+									if opt:FindFirstChild('Title') then
+										opt.Title.TextColor3 = SelectedTheme.TextColor
+									end
+								end
+							end
+						end
+
+						local switch = Element:FindFirstChild('Switch')
+						if switch then
+							TweenService:Create(switch, anim, {BackgroundColor3 = SelectedTheme.ToggleBackground}):Play()
+							local indicator = switch:FindFirstChild('Indicator')
+							if indicator then
+								local isEnabled = indicator.Position.X.Offset > -30 or indicator.Position.X.Scale > 0.5
+								if isEnabled then
+									TweenService:Create(indicator, anim, {BackgroundColor3 = SelectedTheme.ToggleEnabled}):Play()
+									if indicator:FindFirstChild('UIStroke') then
+										TweenService:Create(indicator.UIStroke, anim, {Color = SelectedTheme.ToggleEnabledStroke}):Play()
+									end
+									if switch:FindFirstChild('UIStroke') then
+										TweenService:Create(switch.UIStroke, anim, {Color = SelectedTheme.ToggleEnabledOuterStroke}):Play()
+									end
+								else
+									TweenService:Create(indicator, anim, {BackgroundColor3 = SelectedTheme.ToggleDisabled}):Play()
+									if indicator:FindFirstChild('UIStroke') then
+										TweenService:Create(indicator.UIStroke, anim, {Color = SelectedTheme.ToggleDisabledStroke}):Play()
+									end
+									if switch:FindFirstChild('UIStroke') then
+										TweenService:Create(switch.UIStroke, anim, {Color = SelectedTheme.ToggleDisabledOuterStroke}):Play()
+									end
+								end
+							end
+						end
+
+						local sliderMain = Element:FindFirstChild('Main')
+						if sliderMain and sliderMain:FindFirstChild('Progress') then
+							TweenService:Create(sliderMain, anim, {BackgroundColor3 = SelectedTheme.SliderBackground}):Play()
+							TweenService:Create(sliderMain.Progress, anim, {BackgroundColor3 = SelectedTheme.SliderProgress}):Play()
+							if sliderMain:FindFirstChild('UIStroke') then
+								TweenService:Create(sliderMain.UIStroke, anim, {Color = SelectedTheme.SliderStroke or SelectedTheme.ElementStroke}):Play()
+							end
+							if sliderMain.Progress:FindFirstChild('UIStroke') then
+								TweenService:Create(sliderMain.Progress.UIStroke, anim, {Color = SelectedTheme.SliderStroke or SelectedTheme.ElementStroke}):Play()
+							end
+							if sliderMain:FindFirstChild('Information') then
+								sliderMain.Information.TextColor3 = SelectedTheme.TextColor
+							end
+						end
+
+						local keybindFrame = Element:FindFirstChild('KeybindFrame')
+						if keybindFrame then
+							TweenService:Create(keybindFrame, anim, {BackgroundColor3 = SelectedTheme.InputBackground}):Play()
+							if keybindFrame:FindFirstChild('UIStroke') then
+								TweenService:Create(keybindFrame.UIStroke, anim, {Color = SelectedTheme.InputStroke}):Play()
+							end
+							if keybindFrame:FindFirstChild('KeybindBox') then
+								keybindFrame.KeybindBox.TextColor3 = SelectedTheme.TextColor
+							end
+						end
+
+						local inputFrame = Element:FindFirstChild('InputFrame')
+						if inputFrame then
+							TweenService:Create(inputFrame, anim, {BackgroundColor3 = SelectedTheme.InputBackground}):Play()
+							if inputFrame:FindFirstChild('UIStroke') then
+								TweenService:Create(inputFrame.UIStroke, anim, {Color = SelectedTheme.InputStroke}):Play()
+							end
+							local inputBox = inputFrame:FindFirstChild('InputBox')
+							if inputBox then
+								inputBox.TextColor3 = SelectedTheme.TextColor
+								inputBox.PlaceholderColor3 = SelectedTheme.PlaceholderColor or Color3.fromRGB(178, 178, 178)
 							end
 						end
 					end
 				end
-
-				local switch = Element:FindFirstChild('Switch')
-				if switch then
-					local isEnabled = switch.Position.X.Scale > 0.4
-					if isEnabled then
-						TweenService:Create(Element, anim, {BackgroundColor3 = SelectedTheme.ToggleEnabled}):Play()
-					else
-						TweenService:Create(Element, anim, {BackgroundColor3 = SelectedTheme.ToggleDisabled}):Play()
-					end
-				end
-
-				local sliderMain = Element:FindFirstChild('Main')
-				if sliderMain and sliderMain:FindFirstChild('Progress') then
-					TweenService:Create(sliderMain, anim, {BackgroundColor3 = SelectedTheme.SliderBackground}):Play()
-					TweenService:Create(sliderMain.Progress, anim, {BackgroundColor3 = SelectedTheme.SliderProgress}):Play()
-				end
 			end
 		end
+	end
+
+	if updateFileExplorerTheme then
+		pcall(updateFileExplorerTheme)
 	end
 
 	for _, TabButton in ipairs(TabList:GetChildren()) do
@@ -1652,11 +1748,11 @@ local function ChangeTheme(Theme)
 	end
 end
 
-local function getIcon(name : string): {id: number, imageRectSize: Vector2, imageRectOffset: Vector2}
+local function getIcon(name : string): {id: number, imageRectSize: Vector2, imageRectOffset: Vector2}?
 	if not Icons or type(Icons) ~= "table" then
 		return nil
 	end
-	name = string.match(string.lower(name), "^%s*(.*)%s*$") :: string
+	name = string.match(string.lower(name), "^%s*(.-)%s*$") :: string
 	local sizedicons = nil
 	pcall(function()
 		sizedicons = Icons['48px']
@@ -1755,7 +1851,7 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 
 	connectFunctions()
 
-	dragObject.InputBegan:Connect(function(input, processed)
+	local dragBegan = dragObject.InputBegan:Connect(function(input, processed)
 		if processed then return end
 
 		local inputType = input.UserInputType.Name
@@ -1768,6 +1864,7 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 			end
 		end
 	end)
+	table.insert(allLibraryConnections, dragBegan)
 
 	local inputEnded = UserInputService.InputEnded:Connect(function(input)
 		if not dragging then return end
@@ -1781,6 +1878,7 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 			end
 		end
 	end)
+	table.insert(allLibraryConnections, inputEnded)
 
 	local renderStepped = RunService.RenderStepped:Connect(function()
 		if dragging and not Hidden then
@@ -1803,10 +1901,15 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 		end
 	end)
 
-	object.Destroying:Connect(function()
+	table.insert(allLibraryConnections, renderStepped)
+	local destroyConn
+	destroyConn = object.Destroying:Connect(function()
+		if dragBegan then dragBegan:Disconnect() end
 		if inputEnded then inputEnded:Disconnect() end
 		if renderStepped then renderStepped:Disconnect() end
+		if destroyConn then destroyConn:Disconnect() end
 	end)
+	table.insert(allLibraryConnections, destroyConn)
 end
 
 local function PackColor(Color)
@@ -1821,7 +1924,7 @@ local function LoadConfiguration(Configuration)
 	local success, Data = pcall(function() return HttpService:JSONDecode(Configuration) end)
 	local changed
 
-	if not success then return end
+	if not success or type(Data) ~= "table" then return end
 
 	for FlagName, Flag in pairs(RayfieldLibrary.Flags) do
 		local FlagValue = Data[FlagName]
@@ -1868,8 +1971,9 @@ local function SaveConfiguration()
 		end
 	end
 
-	if useStudio then
-		if script.Parent:FindFirstChild('configuration') then script.Parent.configuration:Destroy() end
+	if useStudio and script and script.Parent then
+		local oldConfig = script.Parent:FindFirstChild('configuration')
+		if oldConfig then oldConfig:Destroy() end
 
 		local ScreenGui = Instance.new("ScreenGui")
 		ScreenGui.Parent = script.Parent
@@ -1913,8 +2017,8 @@ function RayfieldLibrary:Notify(data)
 
 		newNotification.Title.TextColor3 = SelectedTheme.TextColor
 		newNotification.Description.TextColor3 = SelectedTheme.TextColor
-		newNotification.BackgroundColor3 = SelectedTheme.Background
-		newNotification.UIStroke.Color = SelectedTheme.TextColor
+		newNotification.BackgroundColor3 = SelectedTheme.NotificationBackground or SelectedTheme.Background
+		newNotification.UIStroke.Color = SelectedTheme.ElementStroke
 		newNotification.Icon.ImageColor3 = SelectedTheme.TextColor
 
 		newNotification.BackgroundTransparency = 1
@@ -2262,14 +2366,15 @@ end
 
 local function saveSettings()
 	local encoded
-	local success, err = pcall(function()
+	local success = pcall(function()
 		encoded = HttpService:JSONEncode(settingsTable)
 	end)
 
 	if success then
-		if useStudio then
-			if script.Parent['get.val'] then
-				script.Parent['get.val'].Value = encoded
+		if useStudio and script and script.Parent then
+			local getVal = script.Parent:FindFirstChild('get.val')
+			if getVal and getVal:IsA("ValueBase") then
+				(getVal :: any).Value = encoded
 			end
 		end
 		callSafely(writefile, RayfieldFolder..'/settings'..ConfigurationExtension, encoded)
@@ -2454,7 +2559,7 @@ local function createSettings(window, winSettings)
 	end
 	table.sort(themeNames)
 
-	local themeDropdown = newTab:CreateDropdown({
+	newTab:CreateDropdown({
 		Name = "Preset Themes",
 		Options = themeNames,
 		CurrentOption = {initialThemeName},
@@ -2739,6 +2844,7 @@ local function fadeOutKeyUI(KeyMain)
 end
 
 function RayfieldLibrary:CreateWindow(Settings)
+	currentWindowSettings = Settings
 	if Rayfield:FindFirstChild('Loading') then
 		if getgenv and not getgenv().rayfieldCached then
 			Rayfield.Enabled = true
@@ -2747,7 +2853,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			local banner = Rayfield.Loading:FindFirstChild('Banner')
 			if banner then
-				local assetPath = RayfieldFolder .. "/Assets"
 				if Settings.LoadingImage and tostring(Settings.LoadingImage) ~= "" then
 					banner.Image = tostring(Settings.LoadingImage)
 				elseif type(getcustomasset) == "function" and isfile and (isfile(AssetPath .. "/1.png") or isfile("Rayfield_Assets/1.png") or isfile("1.png")) then
@@ -2878,7 +2983,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 	end
 
 	if Settings.Theme then
-		local success, result = pcall(ChangeTheme, Settings.Theme)
+		local success = pcall(ChangeTheme, Settings.Theme)
 		if not success then
 			pcall(ChangeTheme, 'Default')
 		end
@@ -2944,7 +3049,10 @@ function RayfieldLibrary:CreateWindow(Settings)
 	end)
 
 	makeDraggable(Main, Topbar, false, {dragOffset, dragOffsetMobile})
-	if dragBar then dragBar.Position = useMobileSizing and UDim2.new(0.5, 0, 0.5, dragOffsetMobile) or UDim2.new(0.5, 0, 0.5, dragOffset) makeDraggable(Main, dragInteract, true, {dragOffset, dragOffsetMobile}) end
+	if dragBar then
+		dragBar.Position = useMobileSizing and UDim2.new(0.5, 0, 0.5, dragOffsetMobile) or UDim2.new(0.5, 0, 0.5, dragOffset)
+		makeDraggable(Main, dragInteract, true, {dragOffset, dragOffsetMobile})
+	end
 
 	for _, TabButton in ipairs(TabList:GetChildren()) do
 		if TabButton.ClassName == "Frame" and TabButton.Name ~= "Placeholder" then
@@ -2983,6 +3091,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 		end
 	end
 
+	local Window = {}
 	if (Settings.KeySystem) then
 		if not Settings.KeySettings then
 			Passthrough = true
@@ -2995,12 +3104,12 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 		if Settings.KeySettings.GrabKeyFromSite then
 			for i, Key in ipairs(Settings.KeySettings.Key) do
-				local Success, Response = pcall(function()
-					Settings.KeySettings.Key[i] = tostring(game:HttpGet(Key):gsub("[\n\r]", " "))
-					Settings.KeySettings.Key[i] = string.gsub(Settings.KeySettings.Key[i], " ", "")
+				pcall(function()
+					local rawKey = game:HttpGet(Key)
+					local cleanKey = string.gsub(rawKey, "[\n\r]", " ")
+					local sanitizedKey = string.gsub(cleanKey, " ", "")
+					Settings.KeySettings.Key[i] = sanitizedKey
 				end)
-				if not Success then
-				end
 			end
 		end
 
@@ -3009,10 +3118,13 @@ function RayfieldLibrary:CreateWindow(Settings)
 		end
 
 		if callSafely(isfile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension) then
-			for _, MKey in ipairs(Settings.KeySettings.Key) do
-				local savedKeys = callSafely(readfile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension)
-				if savedKeys and string.find(savedKeys, MKey) then
-					Passthrough = true
+			local savedKeys = callSafely(readfile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension)
+			if savedKeys then
+				for _, MKey in ipairs(Settings.KeySettings.Key) do
+					if string.find(savedKeys, MKey, 1, true) then
+						Passthrough = true
+						break
+					end
 				end
 			end
 		end
@@ -3025,8 +3137,17 @@ function RayfieldLibrary:CreateWindow(Settings)
 		if not Passthrough then
 			local AttemptsRemaining = Settings.KeySettings.MaxAttempts or 5
 			Rayfield.Enabled = false
-			local KeyUI = useStudio and script.Parent:FindFirstChild('Key') or game:GetObjects("rbxassetid://11380036235")[1]
-
+			local KeyUI = nil
+			if useStudio and script and script.Parent then
+				KeyUI = script.Parent:FindFirstChild("Key")
+			else
+				local ok, objs = pcall(function() return game:GetObjects("rbxassetid://11380036235") end)
+				if ok and type(objs) == "table" and objs[1] then KeyUI = objs[1] end
+			end
+			if not KeyUI then
+				warn("Rayfield: Key UI asset could not be loaded, bypassing key system.")
+				Passthrough = true
+			else
 			local keySafeName = "KeyUI_" .. (Settings.Name and string.gsub(Settings.Name, "[^%w_]+", "") or "Window")
 			KeyUI.Name = keySafeName
 			safeParentGui(KeyUI)
@@ -3091,8 +3212,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 					if AttemptsRemaining == 0 then
 						fadeOutKeyUI(KeyMain)
 						task.wait(0.45)
-						Players.LocalPlayer:Kick("No Attempts Remaining")
-						game:Shutdown()
+						pcall(function() Players.LocalPlayer:Kick("No Attempts Remaining") end)
+						pcall(function() game:Shutdown() end)
 					end
 					KeyMain.Input.InputBox.Text = ""
 					AttemptsRemaining = AttemptsRemaining - 1
@@ -3113,13 +3234,14 @@ function RayfieldLibrary:CreateWindow(Settings)
 				RayfieldLibrary:Destroy()
 				KeyUI:Destroy()
 			end)
+			end
 		else
 			Passthrough = true
 		end
 	end
 	if Settings.KeySystem then
 		repeat task.wait() until Passthrough
-		if rayfieldDestroyed then return end
+		if rayfieldDestroyed then return Window end
 	end
 
 	Notifications.Template.Visible = false
@@ -3146,7 +3268,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 	TabList.Template.Visible = false
 
 	local FirstTab = false
-	local Window = {}
+	Window = Window or {}
 	function Window:CreateTab(Name, Image, Ext)
 		local SDone = false
 		local TabButton = TabList.Template:Clone()
@@ -3274,6 +3396,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Button.Visible = true
 			Button.Parent = TabPage
 
+			Button.BackgroundColor3 = SelectedTheme.ElementBackground
+			Button.UIStroke.Color = SelectedTheme.ElementStroke
 			Button.BackgroundTransparency = 1
 			Button.UIStroke.Transparency = 1
 			Button.Title.TextTransparency = 1
@@ -3283,7 +3407,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TweenService:Create(Button.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			Button.Interact.MouseButton1Click:Connect(function()
-				local Success, Response = pcall(ButtonSettings.Callback)
+				local Success = pcall(ButtonSettings.Callback)
 				if rayfieldDestroyed then
 					return
 				end
@@ -3299,7 +3423,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Button.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				else
 					if not ButtonSettings.Ext then
-						SaveConfiguration(ButtonSettings.Name..'\n')
+						SaveConfiguration()
 					end
 					TweenService:Create(Button, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
 					TweenService:Create(Button.ElementIndicator, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
@@ -3487,7 +3611,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				local r,g,b = math.floor((h*255)+0.5),math.floor((s*255)+0.5),math.floor((v*255)+0.5)
 				ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
 				if not ColorPickerSettings.Ext then
-					SaveConfiguration(ColorPickerSettings.Flag..'\n'..tostring(ColorPickerSettings.Color))
+					SaveConfiguration()
 				end
 			end
 			ColorPicker.RGB.RInput.InputBox.FocusLost:connect(function()
@@ -3777,7 +3901,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Input.InputFrame.Size = UDim2.new(0, Input.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
 
 			Input.InputFrame.InputBox.FocusLost:Connect(function()
-				local Success, Response = pcall(function()
+				local Success = pcall(function()
 					InputSettings.Callback(Input.InputFrame.InputBox.Text)
 					InputSettings.CurrentValue = Input.InputFrame.InputBox.Text
 				end)
@@ -3817,7 +3941,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				Input.InputFrame.InputBox.Text = text
 				InputSettings.CurrentValue = text
 
-				local Success, Response = pcall(function()
+				pcall(function()
 					InputSettings.Callback(text)
 				end)
 
@@ -4021,7 +4145,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 							Debounce = true
 						end
 
-						local Success, Response = pcall(function()
+						local Success = pcall(function()
 							DropdownSettings.Callback(DropdownSettings.CurrentOption)
 						end)
 
@@ -4113,7 +4237,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					end
 				end
 
-				local Success, Response = pcall(function()
+				local Success = pcall(function()
 					DropdownSettings.Callback(NewOption)
 				end)
 				if not Success then
@@ -4137,7 +4261,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				end
 			end
 
-			function DropdownSettings:Refresh(optionsTable: table)
+			function DropdownSettings:Refresh(optionsTable: { any })
 				DropdownSettings.Options = optionsTable
 				for _, option in Dropdown.List:GetChildren() do
 					if option.ClassName == "Frame" and option.Name ~= "Placeholder" then
@@ -4254,7 +4378,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					end)
 
 					if not KeybindSettings.HoldToInteract then
-						local Success, Response = pcall(KeybindSettings.Callback)
+						local Success = pcall(KeybindSettings.Callback)
 						if not Success then
 							TweenService:Create(Keybind, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(85, 0, 0)}):Play()
 							TweenService:Create(Keybind.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
@@ -4313,14 +4437,14 @@ function RayfieldLibrary:CreateWindow(Settings)
 		end
 
 		function Tab:CreateToggle(ToggleSettings)
-			local ToggleValue = {}
-
 			local Toggle = Elements.Template.Toggle:Clone()
 			Toggle.Name = ToggleSettings.Name
 			Toggle.Title.Text = ToggleSettings.Name
 			Toggle.Visible = true
 			Toggle.Parent = TabPage
 
+			Toggle.BackgroundColor3 = SelectedTheme.ElementBackground
+			Toggle.UIStroke.Color = SelectedTheme.ElementStroke
 			Toggle.BackgroundTransparency = 1
 			Toggle.UIStroke.Transparency = 1
 			Toggle.Title.TextTransparency = 1
@@ -4377,8 +4501,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				end
 
-				local Success, Response = pcall(function()
-
+				local Success = pcall(function()
 					ToggleSettings.Callback(ToggleSettings.CurrentValue)
 				end)
 
@@ -4424,8 +4547,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 				end
 
-				local Success, Response = pcall(function()
-
+				local Success = pcall(function()
 					ToggleSettings.Callback(ToggleSettings.CurrentValue)
 				end)
 
@@ -4531,6 +4653,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 					TweenService:Create(Slider.Main.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
 					TweenService:Create(Slider.Main.Progress.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.3}):Play()
+					if SLDragging and not SliderSettings.Ext then SaveConfiguration() end
 					SLDragging = false
 				end
 			end)
@@ -4574,7 +4697,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 						end
 
 						if SliderSettings.CurrentValue ~= NewValue then
-							local Success, Response = pcall(function()
+							local Success = pcall(function()
 								SliderSettings.Callback(NewValue)
 							end)
 							if not Success then
@@ -4588,9 +4711,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 							end
 
 							SliderSettings.CurrentValue = NewValue
-							if not SliderSettings.Ext then
-								SaveConfiguration()
-							end
 						end
 					else
 						TweenService:Create(Slider.Main.Progress, TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, Location - Slider.Main.AbsolutePosition.X > 5 and Location - Slider.Main.AbsolutePosition.X or 5, 1, 0)}):Play()
@@ -4600,12 +4720,12 @@ function RayfieldLibrary:CreateWindow(Settings)
 			end)
 
 			function SliderSettings:Set(NewVal)
-				local NewVal = math.clamp(NewVal, SliderSettings.Range[1], SliderSettings.Range[2])
+				NewVal = math.clamp(NewVal, SliderSettings.Range[1], SliderSettings.Range[2])
 
 				TweenService:Create(Slider.Main.Progress, TweenInfo.new(0.45, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, Slider.Main.AbsoluteSize.X * ((NewVal - SliderSettings.Range[1]) / (SliderSettings.Range[2] - SliderSettings.Range[1])) > 5 and Slider.Main.AbsoluteSize.X * ((NewVal - SliderSettings.Range[1]) / (SliderSettings.Range[2] - SliderSettings.Range[1])) or 5, 1, 0)}):Play()
 				Slider.Main.Information.Text = tostring(NewVal) .. " " .. (SliderSettings.Suffix or "")
 
-				local Success, Response = pcall(function()
+				local Success = pcall(function()
 					SliderSettings.Callback(NewVal)
 				end)
 
@@ -4716,11 +4836,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 		pcall(ChangeTheme, NewTheme)
 	end
 
-	local success, result = pcall(function()
+	pcall(function()
 		createSettings(Window, Settings)
 	end)
-
-	if not success then end
 
 	if reporter and getSetting("System", "usageAnalytics") then
 		local themeName = "Default"
@@ -4798,9 +4916,12 @@ function RayfieldLibrary:Destroy()
 		hideHotkeyConnection:Disconnect()
 	end
 	for _, connection in keybindConnections do
-		connection:Disconnect()
+		pcall(function() connection:Disconnect() end)
 	end
-	Rayfield:Destroy()
+	for _, connection in ipairs(allLibraryConnections) do
+		pcall(function() connection:Disconnect() end)
+	end
+	if Rayfield then Rayfield:Destroy() end
 end
 
 Topbar.ChangeSize.MouseButton1Click:Connect(function()
@@ -5027,7 +5148,7 @@ end
 		mtIcon.ZIndex = 151
 		task.spawn(function()
 			pcall(function()
-				game:GetService("ContentProvider"):PreloadAsync({mtIcon})
+				(game:GetService("ContentProvider") :: any):PreloadAsync({mtIcon})
 			end)
 		end)
 
@@ -5098,30 +5219,35 @@ end
 			end
 		end)
 
+		local curSettings = currentWindowSettings
 		local isMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled)
-		if Settings and Settings.MobileToggle ~= nil then
-			isMobile = Settings.MobileToggle
+		if curSettings and curSettings.MobileToggle ~= nil then
+			isMobile = curSettings.MobileToggle
 		end
 
 		mobileToggle.Visible = isMobile
 	end
 
 	if mobileToggle then
+		local curSettings = currentWindowSettings
 		local isMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled)
-		if Settings and Settings.MobileToggle ~= nil then
-			isMobile = Settings.MobileToggle
+		if curSettings and curSettings.MobileToggle ~= nil then
+			isMobile = curSettings.MobileToggle
 		end
 		mobileToggle.Visible = isMobile
 
-		UserInputService.LastInputTypeChanged:Connect(function(lastInputType)
-			if lastInputType == Enum.UserInputType.Touch and (Settings == nil or Settings.MobileToggle == nil or Settings.MobileToggle == true) then
+		local ltypeConn = UserInputService.LastInputTypeChanged:Connect(function(lastInputType)
+			local s = currentWindowSettings
+			if lastInputType == Enum.UserInputType.Touch and (s == nil or s.MobileToggle == nil or s.MobileToggle == true) then
 				mobileToggle.Visible = true
 			end
 		end)
+		table.insert(allLibraryConnections, ltypeConn)
 	end
 
+	local curSettings = currentWindowSettings
 	local isPhoneOrMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled) or (UserInputService.TouchEnabled and not UserInputService.MouseEnabled)
-	if Settings and (Settings.DisableWorkspace == true or Settings.IsMobile == true or Settings.Mobile == true) then
+	if curSettings and (curSettings.DisableWorkspace == true or curSettings.IsMobile == true or curSettings.Mobile == true) then
 		isPhoneOrMobile = true
 	end
 
@@ -5162,6 +5288,8 @@ end
 	local function getUIFont()
 		return (SelectedTheme and SelectedTheme.Font) or currentUIFont or Enum.Font.Gotham
 	end
+
+	local refreshList
 
 	local workspacePage = Instance.new("Frame")
 	workspacePage.Name = "Workspace"
@@ -5541,8 +5669,8 @@ end
 			icon.AnchorPoint = Vector2.new(0, 0.5)
 			icon.BackgroundTransparency = 1
 			icon.Image = opt.Icon
-			icon.ImageColor3 = opt.Color or SelectedTheme.TextColor
-			icon.ImageTransparency = 0.2
+			icon.ImageColor3 = SelectedTheme.TextColor
+			icon.ImageTransparency = 0.15
 			icon.ZIndex = 96
 			icon.Active = false
 			icon.Parent = btn
@@ -5567,14 +5695,15 @@ end
 						BackgroundColor3 = SelectedTheme.ElementStroke
 					}):Play()
 					TweenService:Create(bStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						Transparency = 0.3
+						Transparency = 0.3,
+						Color = SelectedTheme.TextColor
 					}):Play()
 					TweenService:Create(icon, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
 						ImageTransparency = 0,
-						ImageColor3 = Color3.fromRGB(255, 255, 255)
+						ImageColor3 = SelectedTheme.SelectedTabTextColor or Color3.fromRGB(255, 255, 255)
 					}):Play()
 					TweenService:Create(lbl, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						TextColor3 = Color3.fromRGB(255, 255, 255)
+						TextColor3 = SelectedTheme.SelectedTabTextColor or Color3.fromRGB(255, 255, 255)
 					}):Play()
 				else
 					TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
@@ -5584,8 +5713,8 @@ end
 						Transparency = 1
 					}):Play()
 					TweenService:Create(icon, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						ImageTransparency = 0.2,
-						ImageColor3 = opt.Color or SelectedTheme.TextColor
+						ImageTransparency = 0.15,
+						ImageColor3 = SelectedTheme.TextColor
 					}):Play()
 					TweenService:Create(lbl, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
 						TextColor3 = SelectedTheme.TextColor
@@ -5613,7 +5742,6 @@ end
 				task.spawn(opt.Callback)
 			end
 			btn.Activated:Connect(handleAction)
-			btn.MouseButton1Click:Connect(handleAction)
 		end
 
 		local mainPos = Main.AbsolutePosition
@@ -5634,6 +5762,11 @@ end
 
 		local posX = math.clamp(targetX, 10, math.max(10, mainSize.X - menuWidth - 10))
 		local posY = math.clamp(targetY, 10, math.max(10, mainSize.Y - totalHeight - 10))
+
+		contextMenu.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+		if cmStroke then
+			cmStroke.Color = SelectedTheme.SecondaryElementStroke or SelectedTheme.ElementStroke
+		end
 
 		contextMenu.Position = UDim2.new(0, posX, 0, posY)
 		contextMenu.Size = UDim2.new(0, menuWidth, 0, totalHeight)
@@ -5658,13 +5791,14 @@ end
 		closeContextMenu()
 	end)
 
-	UserInputService.InputChanged:Connect(function(input)
+	local wheelConn = UserInputService.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseWheel and contextMenu.Visible then
 			closeContextMenu()
 		end
 	end)
+	table.insert(allLibraryConnections, wheelConn)
 
-	local function refreshList()
+	refreshList = function()
 		refreshFileListGlobal = refreshList
 		closeContextMenu()
 	    for _, child in ipairs(listFrame:GetChildren()) do
@@ -5734,13 +5868,6 @@ end
 
 	        local size = 0
 	        if not isDir then
-	            pcall(function()
-	                local readFunc = readfile or (getgenv and getgenv().readfile) or (syn and syn.readfile)
-	                if type(readFunc) == "function" then
-	                    local content = readFunc(p)
-	                    size = content and #content or 0
-	                end
-	            end)
 	            table.insert(files, {Path = p, Name = name, IsFolder = false, Size = size, Ext = getExtension(name)})
 	        else
 	            table.insert(folders, {Path = p, Name = name, IsFolder = true, Size = 0, Ext = "DIR"})
@@ -5801,7 +5928,7 @@ end
 	            else
 	                iconImg.Image = (fileAsset and fileAsset ~= "") and fileAsset or "rbxassetid://6034287527"
 	            end
-	            iconImg.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	            iconImg.ImageColor3 = SelectedTheme.TextColor
 	            iconImg.Parent = row
 
 	            local nameLbl = Instance.new("TextLabel")
@@ -5941,7 +6068,6 @@ end
 	                end
 	            end
 	            rowBtn.Activated:Connect(onRowClicked)
-	            rowBtn.MouseButton1Click:Connect(onRowClicked)
 
 	            rowBtn.MouseButton2Click:Connect(function()
 	                openContextMenu(item, rowBtn)
@@ -5957,7 +6083,6 @@ end
 	    refreshList()
 	end
 	backBtn.Activated:Connect(goBack)
-	backBtn.MouseButton1Click:Connect(goBack)
 
 	searchInput:GetPropertyChangedSignal("Text"):Connect(function()
 	    closeContextMenu()
@@ -5965,7 +6090,6 @@ end
 	end)
 
 	local previousTab = nil
-	local TabList = Main.TabList
 
 	filesBtn.MouseButton1Click:Connect(function()
 	    closeContextMenu()
@@ -5996,6 +6120,96 @@ end
 	        refreshList()
 	    end
 	end)
+
+		updateFileExplorerTheme = function()
+			if not workspacePage or not workspacePage.Parent then return end
+			local anim = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+			if searchContainer then
+				TweenService:Create(searchContainer, anim, {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+				if scStroke then
+					TweenService:Create(scStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
+				end
+				if searchInput then
+					searchInput.TextColor3 = SelectedTheme.TextColor
+					searchInput.PlaceholderColor3 = SelectedTheme.PlaceholderColor or Color3.fromRGB(140, 140, 150)
+				end
+			end
+
+			if backBar then
+				if backBtn then
+					TweenService:Create(backBtn, anim, {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+					if bbStroke then
+						TweenService:Create(bbStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
+					end
+					if bbIcon then
+						bbIcon.ImageColor3 = SelectedTheme.TextColor
+					end
+					if bbLbl then
+						bbLbl.TextColor3 = SelectedTheme.TextColor
+					end
+				end
+				if curDirLabel then
+					TweenService:Create(curDirLabel, anim, {BackgroundColor3 = SelectedTheme.ElementBackground, TextColor3 = SelectedTheme.TextColor}):Play()
+					if cdStroke then
+						TweenService:Create(cdStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
+					end
+				end
+			end
+
+			if listFrame then
+				listFrame.ScrollBarImageColor3 = SelectedTheme.ElementStroke
+				for _, row in ipairs(listFrame:GetChildren()) do
+					if row:IsA("Frame") then
+						local isSel = (selectedItem and selectedItem.Path == row.Name)
+						TweenService:Create(row, anim, {
+							BackgroundColor3 = isSel and SelectedTheme.DropdownSelected or SelectedTheme.ElementBackground
+						}):Play()
+						for _, txt in ipairs(row:GetDescendants()) do
+							if txt:IsA("TextLabel") and txt.Name ~= "Size" then
+								txt.TextColor3 = SelectedTheme.TextColor
+							end
+						end
+						local dots = row:FindFirstChild("MenuBtn") and row.MenuBtn:FindFirstChild("Dots")
+						if dots then
+							for _, d in ipairs(dots:GetChildren()) do
+								if d:IsA("Frame") then
+									d.BackgroundColor3 = SelectedTheme.TextColor
+								end
+							end
+						end
+					end
+				end
+			end
+
+			if contextMenu then
+				contextMenu.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+				if cmStroke then
+					cmStroke.Color = SelectedTheme.SecondaryElementStroke or SelectedTheme.ElementStroke
+				end
+				for _, btn in ipairs(contextMenu:GetChildren()) do
+					if btn:IsA("TextButton") then
+						local lbl = btn:FindFirstChildOfClass("TextLabel")
+						if lbl then lbl.TextColor3 = SelectedTheme.TextColor end
+						local icon = btn:FindFirstChildOfClass("ImageLabel")
+						if icon then icon.ImageColor3 = SelectedTheme.TextColor end
+					end
+				end
+			end
+
+			if filesBtn then
+				local layout = Elements:FindFirstChildOfClass("UIPageLayout")
+				if layout and layout.CurrentPage == workspacePage then
+					filesBtn.ImageColor3 = SelectedTheme.TabBackgroundSelected
+				else
+					filesBtn.ImageColor3 = SelectedTheme.TextColor
+				end
+			end
+		end
+
+		if updateFileExplorerTheme then
+			updateFileExplorerTheme()
+		end
 	end
 
 		Topbar.Hide.MouseButton1Click:Connect(function()
@@ -6003,7 +6217,13 @@ end
 end)
 
 hideHotkeyConnection = UserInputService.InputBegan:Connect(function(input, processed)
-	if (input.KeyCode == Enum.KeyCode[getSetting("General", "rayfieldOpen")]) and not processed then
+	local hotkeyName = getSetting("General", "rayfieldOpen")
+	local targetCode = nil
+	if type(hotkeyName) == "string" then
+		pcall(function() targetCode = Enum.KeyCode[hotkeyName] end)
+	end
+	targetCode = targetCode or Enum.KeyCode.K
+	if (input.KeyCode == targetCode) and not processed then
 		if Debounce then return end
 		if Hidden then
 			Hidden = false
@@ -6048,21 +6268,16 @@ function RayfieldLibrary:LoadConfiguration()
 	end
 
 	if CEnabled then
-		local notified
-		local loaded
-
-		local success, result = pcall(function()
+		pcall(function()
 			if useStudio and config then
-				loaded = LoadConfiguration(config)
+				LoadConfiguration(config)
 				return
 			end
 
 			if isfile then
 				if callSafely(isfile, ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension) then
-					loaded = LoadConfiguration(callSafely(readfile, ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension))
+					LoadConfiguration(callSafely(readfile, ConfigurationFolder .. "/" .. CFileName .. ConfigurationExtension))
 				end
-			else
-				notified = true
 			end
 		end)
 	end
@@ -6086,7 +6301,7 @@ if CEnabled and Main:FindFirstChild('Notice') then
 end
 
 task.delay(4, function()
-	RayfieldLibrary.LoadConfiguration()
+	RayfieldLibrary:LoadConfiguration()
 	if Main:FindFirstChild('Notice') and Main.Notice.Visible then
 		TweenService:Create(Main.Notice, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 100, 0, 25), Position = UDim2.new(0.5, 0, 0, -100), BackgroundTransparency = 1}):Play()
 		TweenService:Create(Main.Notice.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
