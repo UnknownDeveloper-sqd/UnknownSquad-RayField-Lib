@@ -1525,6 +1525,7 @@ local currentUIFont = Enum.Font.Gotham
 local refreshFileListGlobal = nil
 local updateFileExplorerTheme: (() -> ())? = nil
 
+local currentActiveTabName: string? = nil
 local function ChangeTheme(Theme)
 	if typeof(Theme) == 'string' then
 		if RayfieldLibrary.Theme[Theme] then
@@ -1617,6 +1618,17 @@ local function ChangeTheme(Theme)
 					if Element.Name == "SectionTitle" then
 						if Element:FindFirstChild('Title') then
 							Element.Title.TextColor3 = SelectedTheme.TextColor
+						end
+					elseif Element.Name == "Paragraph" or Element:FindFirstChild("Content") or Element.Name == "Label" then
+						TweenService:Create(Element, anim, {BackgroundColor3 = SelectedTheme.SecondaryElementBackground}):Play()
+						if Element:FindFirstChild('UIStroke') then
+							TweenService:Create(Element.UIStroke, anim, {Color = SelectedTheme.SecondaryElementStroke}):Play()
+						end
+						if Element:FindFirstChild('Title') and Element.Title:IsA("TextLabel") then
+							Element.Title.TextColor3 = SelectedTheme.TextColor
+						end
+						if Element:FindFirstChild('Content') and Element.Content:IsA("TextLabel") then
+							Element.Content.TextColor3 = SelectedTheme.TextColor
 						end
 					else
 						TweenService:Create(Element, anim, {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
@@ -1735,7 +1747,8 @@ local function ChangeTheme(Theme)
 			if TabButton:FindFirstChild('UIStroke') then
 				TabButton.UIStroke.Color = SelectedTheme.TabStroke
 			end
-			if Elements.UIPageLayout and Elements.UIPageLayout.CurrentPage and Elements.UIPageLayout.CurrentPage.Name == TabButton.Name then
+			local isTabSelected = (currentActiveTabName and TabButton.Name == currentActiveTabName) or (Elements.UIPageLayout and Elements.UIPageLayout.CurrentPage and Elements.UIPageLayout.CurrentPage.Name == TabButton.Name)
+			if isTabSelected then
 				TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
 				if TabButton:FindFirstChild('Title') then TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor end
 				if TabButton:FindFirstChild('Image') then TabButton.Image.ImageColor3 = SelectedTheme.SelectedTabTextColor end
@@ -2629,10 +2642,14 @@ local function createSettings(window, winSettings)
 		Ext = true,
 		Callback = function(Color)
 			SelectedTheme.ElementBackground = Color
+			local h, s, v = Color:ToHSV()
+			SelectedTheme.ElementBackgroundHover = Color3.fromHSV(h, s, math.clamp(v + 0.05, 0, 1))
 			for _, TabPage in ipairs(Elements:GetChildren()) do
 				for _, Element in ipairs(TabPage:GetChildren()) do
 					if Element.ClassName == "Frame" and Element.Name ~= "Placeholder" and Element.Name ~= "SectionSpacing" and Element.Name ~= "Divider" and Element.Name ~= "SectionTitle" and Element.Name ~= "SearchTitle-fsefsefesfsefesfesfThanks" then
-						TweenService:Create(Element, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundColor3 = Color}):Play()
+						if Element.Name ~= "Paragraph" and not Element:FindFirstChild("Content") and Element.Name ~= "Label" then
+							TweenService:Create(Element, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundColor3 = Color}):Play()
+						end
 					end
 				end
 			end
@@ -2664,9 +2681,10 @@ local function createSettings(window, winSettings)
 		Ext = true,
 		Callback = function(Color)
 			SelectedTheme.TabBackground = Color
+			local activeName = if (Elements.UIPageLayout and Elements.UIPageLayout.CurrentPage and Elements.UIPageLayout.CurrentPage.Name ~= "Settings" and Elements.UIPageLayout.CurrentPage.Name ~= "Rayfield Settings") then Elements.UIPageLayout.CurrentPage.Name else currentActiveTabName
 			for _, TabButton in ipairs(TabList:GetChildren()) do
 				if TabButton.ClassName == "Frame" and TabButton.Name ~= "Placeholder" and TabButton.Name ~= "Template" then
-					if not (Elements.UIPageLayout and Elements.UIPageLayout.CurrentPage and Elements.UIPageLayout.CurrentPage.Name == TabButton.Name) then
+					if TabButton.Name ~= activeName then
 						TabButton.BackgroundColor3 = Color
 					end
 				end
@@ -2681,9 +2699,10 @@ local function createSettings(window, winSettings)
 		Ext = true,
 		Callback = function(Color)
 			SelectedTheme.TabBackgroundSelected = Color
+			local activeName = if (Elements.UIPageLayout and Elements.UIPageLayout.CurrentPage and Elements.UIPageLayout.CurrentPage.Name ~= "Settings" and Elements.UIPageLayout.CurrentPage.Name ~= "Rayfield Settings") then Elements.UIPageLayout.CurrentPage.Name else currentActiveTabName
 			for _, TabButton in ipairs(TabList:GetChildren()) do
 				if TabButton.ClassName == "Frame" and TabButton.Name ~= "Placeholder" and TabButton.Name ~= "Template" then
-					if Elements.UIPageLayout and Elements.UIPageLayout.CurrentPage and Elements.UIPageLayout.CurrentPage.Name == TabButton.Name then
+					if TabButton.Name == activeName then
 						TabButton.BackgroundColor3 = Color
 					end
 				end
@@ -2700,6 +2719,34 @@ local function createSettings(window, winSettings)
 			SelectedTheme.ToggleEnabled = Color
 			SelectedTheme.SliderProgress = Color
 			SelectedTheme.SliderBackground = Color
+			if Rayfield.Main.Topbar:FindFirstChild('Icon') then
+				Rayfield.Main.Topbar.Icon.ImageColor3 = Color
+			end
+			for _, TabPage in ipairs(Elements:GetChildren()) do
+				if TabPage:IsA("ScrollingFrame") or TabPage:IsA("Frame") then
+					for _, Element in ipairs(TabPage:GetChildren()) do
+						if Element:IsA("Frame") then
+							local switch = Element:FindFirstChild('Switch')
+							if switch and switch:FindFirstChild('Indicator') then
+								local isEnabled = switch.Indicator.Position.X.Offset > -30 or switch.Indicator.Position.X.Scale > 0.5
+								if isEnabled then
+									switch.Indicator.BackgroundColor3 = Color
+									if switch.Indicator:FindFirstChild('UIStroke') then
+										switch.Indicator.UIStroke.Color = SelectedTheme.ToggleEnabledStroke or Color
+									end
+									if switch:FindFirstChild('UIStroke') then
+										switch.UIStroke.Color = SelectedTheme.ToggleEnabledOuterStroke or Color
+									end
+								end
+							end
+							local sliderMain = Element:FindFirstChild('Main')
+							if sliderMain and sliderMain:FindFirstChild('Progress') then
+								sliderMain.Progress.BackgroundColor3 = Color
+							end
+						end
+					end
+				end
+			end
 		end
 	})
 	pickerSetters["ToggleEnabled"] = function() cpAccent:Set(SelectedTheme.ToggleEnabled) end
@@ -3350,6 +3397,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TweenService:Create(TabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
 		elseif not Ext then
 			FirstTab = Name
+			currentActiveTabName = Name
 			TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
 			TabButton.Image.ImageColor3 = SelectedTheme.SelectedTabTextColor
 			TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor
@@ -3360,6 +3408,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 		TabButton.Interact.MouseButton1Click:Connect(function()
 			if Minimised then return end
+			currentActiveTabName = TabButton.Name
 			TweenService:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(TabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
 			TweenService:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
@@ -3471,15 +3520,112 @@ function RayfieldLibrary:CreateWindow(Settings)
 			end
 			ColorPicker.Parent = TabPage
 			ColorPicker.Size = UDim2.new(1, -10, 0, 45)
+
+			Background.AnchorPoint = Vector2.new(1, 0.5)
+			Background.Position = UDim2.new(1, -20, 0.5, 0)
 			Background.Size = UDim2.new(0, 39, 0, 22)
+			Background.ClipsDescendants = true
 			Display.BackgroundTransparency = 0
+			Display.ZIndex = 5
+
+			local displayStroke = Display:FindFirstChildOfClass("UIStroke")
+			if not displayStroke then
+				displayStroke = Instance.new("UIStroke")
+				displayStroke.Name = "Stroke"
+				displayStroke.Color = SelectedTheme.ElementStroke or Color3.fromRGB(80, 80, 80)
+				displayStroke.Thickness = 1
+				displayStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				displayStroke.Parent = Display
+			end
+
+			Slider.AnchorPoint = Vector2.new(1, 0)
+			Slider.Position = UDim2.new(1, -20, 0, 104)
+			Slider.Size = UDim2.new(0, 173, 0, 12)
+			Slider.ClipsDescendants = false
+			Slider.Active = true
+			Slider.ZIndex = 1
+			Slider.Visible = false
+			if Slider:FindFirstChild("SliderPoint") then
+				Slider.SliderPoint.AnchorPoint = Vector2.new(0.5, 0.5)
+				Slider.SliderPoint.Active = true
+				Slider.SliderPoint.ZIndex = 5
+				Slider.SliderPoint.ImageTransparency = 1
+			end
+
+			Main.Image = ""
+			Main.BackgroundTransparency = 0
+			Main.Active = true
+			Main.ClipsDescendants = false
+			Main.AnchorPoint = Vector2.new(0.5, 0.5)
+			Main.Position = UDim2.new(0.5, 0, 0.5, 0)
+			Main.Size = UDim2.new(1, 0, 1, 0)
+			Main.ZIndex = 1
+			Main.Visible = false
+
+			local mainCorner = Main:FindFirstChildOfClass("UICorner")
+			if not mainCorner then
+				mainCorner = Instance.new("UICorner")
+				mainCorner.CornerRadius = Background.UICorner.CornerRadius
+				mainCorner.Parent = Main
+			end
+
+			local satGradFrame = Instance.new("Frame")
+			satGradFrame.Name = "SatGradFrame"
+			satGradFrame.Size = UDim2.new(1, 0, 1, 0)
+			satGradFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			satGradFrame.BackgroundTransparency = 0
+			satGradFrame.BorderSizePixel = 0
+			satGradFrame.Active = false
+			satGradFrame.ZIndex = 2
+			local satCorner = Instance.new("UICorner")
+			satCorner.CornerRadius = Background.UICorner.CornerRadius
+			satCorner.Parent = satGradFrame
+			local satUIGrad = Instance.new("UIGradient")
+			satUIGrad.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+			satUIGrad.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0),
+				NumberSequenceKeypoint.new(1, 1)
+			})
+			satUIGrad.Parent = satGradFrame
+			satGradFrame.Parent = Main
+
+			local valGradFrame = Instance.new("Frame")
+			valGradFrame.Name = "ValGradFrame"
+			valGradFrame.Size = UDim2.new(1, 0, 1, 0)
+			valGradFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+			valGradFrame.BackgroundTransparency = 0
+			valGradFrame.BorderSizePixel = 0
+			valGradFrame.Active = false
+			valGradFrame.ZIndex = 3
+			local valCorner = Instance.new("UICorner")
+			valCorner.CornerRadius = Background.UICorner.CornerRadius
+			valCorner.Parent = valGradFrame
+			local valUIGrad = Instance.new("UIGradient")
+			valUIGrad.Rotation = 90
+			valUIGrad.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0))
+			valUIGrad.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(1, 0)
+			})
+			valUIGrad.Parent = valGradFrame
+			valGradFrame.Parent = Main
+
+			Main.MainPoint.ZIndex = 5
+			Main.MainPoint.AnchorPoint = Vector2.new(0.5, 0.5)
+			Main.MainPoint.Active = true
 			Main.MainPoint.ImageTransparency = 1
+			Main.MainPoint.Visible = false
+
+			satGradFrame.Visible = false
+			valGradFrame.Visible = false
+
 			ColorPicker.Interact.Size = UDim2.new(1, 0, 1, 0)
 			ColorPicker.Interact.Position = UDim2.new(0.5, 0, 0.5, 0)
+			ColorPicker.Interact.AnchorPoint = Vector2.new(0.5, 0.5)
 			ColorPicker.RGB.Position = UDim2.new(0, 17, 0, 70)
+			ColorPicker.RGB.Visible = false
 			ColorPicker.HexInput.Position = UDim2.new(0, 17, 0, 90)
-			Main.ImageTransparency = 1
-			Background.BackgroundTransparency = 1
+			ColorPicker.HexInput.Visible = false
 
 			for _, rgbinput in ipairs(ColorPicker.RGB:GetChildren()) do
 				if rgbinput:IsA("Frame") then
@@ -3495,6 +3641,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 			local mouse = Players.LocalPlayer:GetMouse()
 			local mainDragging = false
 			local sliderDragging = false
+
 			ColorPicker.Interact.MouseButton1Down:Connect(function()
 				task.spawn(function()
 					TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
@@ -3508,73 +3655,154 @@ function RayfieldLibrary:CreateWindow(Settings)
 					opened = true
 					TweenService:Create(Background, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 18, 0, 15)}):Play()
 					task.wait(0.1)
-					TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 120)}):Play()
-					TweenService:Create(Background, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 173, 0, 86)}):Play()
+					Background.ClipsDescendants = false
+					Main.Visible = true
+					satGradFrame.Visible = true
+					valGradFrame.Visible = true
+					Main.MainPoint.Visible = true
+					Slider.Visible = true
+					ColorPicker.RGB.Visible = true
+					ColorPicker.HexInput.Visible = true
+					Background.AnchorPoint = Vector2.new(1, 0)
+					TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 128)}):Play()
+					TweenService:Create(Background, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Position = UDim2.new(1, -20, 0, 10), Size = UDim2.new(0, 173, 0, 86)}):Play()
+					TweenService:Create(Slider, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Position = UDim2.new(1, -20, 0, 104)}):Play()
 					TweenService:Create(Display, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
-					TweenService:Create(ColorPicker.Interact, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Position = UDim2.new(0.289, 0, 0.5, 0)}):Play()
-					TweenService:Create(ColorPicker.RGB, TweenInfo.new(0.8, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 17, 0, 40)}):Play()
-					TweenService:Create(ColorPicker.HexInput, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 17, 0, 73)}):Play()
-					TweenService:Create(ColorPicker.Interact, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0.574, 0, 1, 0)}):Play()
+					if displayStroke then
+						TweenService:Create(displayStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+					end
+					ColorPicker.Interact.AnchorPoint = Vector2.new(0, 0)
+					TweenService:Create(ColorPicker.Interact, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, -200, 0, 38)}):Play()
+					TweenService:Create(ColorPicker.RGB, TweenInfo.new(0.8, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 17, 0, 42)}):Play()
+					TweenService:Create(ColorPicker.HexInput, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 17, 0, 78)}):Play()
 					TweenService:Create(Main.MainPoint, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
-					TweenService:Create(Main, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {ImageTransparency = SelectedTheme ~= RayfieldLibrary.Theme.Default and 0.25 or 0.1}):Play()
+					if Slider:FindFirstChild("SliderPoint") then
+						TweenService:Create(Slider.SliderPoint, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+					end
 					TweenService:Create(Background, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 				else
 					opened = false
-					TweenService:Create(ColorPicker, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 45)}):Play()
-					TweenService:Create(Background, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 39, 0, 22)}):Play()
-					TweenService:Create(ColorPicker.Interact, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, 0, 1, 0)}):Play()
-					TweenService:Create(ColorPicker.Interact, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
-					TweenService:Create(ColorPicker.RGB, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 17, 0, 70)}):Play()
-					TweenService:Create(ColorPicker.HexInput, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 17, 0, 90)}):Play()
-					TweenService:Create(Display, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
-					TweenService:Create(Main.MainPoint, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
-					TweenService:Create(Main, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
-					TweenService:Create(Background, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+					Main.Visible = false
+					satGradFrame.Visible = false
+					valGradFrame.Visible = false
+					Main.MainPoint.Visible = false
+					Slider.Visible = false
+					ColorPicker.RGB.Visible = false
+					ColorPicker.HexInput.Visible = false
+					Background.ClipsDescendants = true
+					Display.BackgroundTransparency = 0
+					if displayStroke then
+						displayStroke.Transparency = 0
+					end
+					TweenService:Create(ColorPicker, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -10, 0, 45)}):Play()
+					Background.AnchorPoint = Vector2.new(1, 0.5)
+					TweenService:Create(Background, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Position = UDim2.new(1, -20, 0.5, 0), Size = UDim2.new(0, 39, 0, 22)}):Play()
+					ColorPicker.Interact.AnchorPoint = Vector2.new(0.5, 0.5)
+					TweenService:Create(ColorPicker.Interact, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+					ColorPicker.RGB.Position = UDim2.new(0, 17, 0, 70)
+					ColorPicker.HexInput.Position = UDim2.new(0, 17, 0, 90)
+					Slider.Position = UDim2.new(1, -20, 0, 104)
 				end
+			end)
 
-			end)
-
-			local colorPickerInputConnection = UserInputService.InputEnded:Connect(function(input, gameProcessed) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-					mainDragging = false
-					sliderDragging = false
-				end end)
-			Main.MouseButton1Down:Connect(function()
-				if opened then
-					mainDragging = true
-				end
-			end)
-			Main.MainPoint.MouseButton1Down:Connect(function()
-				if opened then
-					mainDragging = true
-				end
-			end)
-			Slider.MouseButton1Down:Connect(function()
-				sliderDragging = true
-			end)
-			Slider.SliderPoint.MouseButton1Down:Connect(function()
-				sliderDragging = true
-			end)
 			local h,s,v = ColorPickerSettings.Color:ToHSV()
 			local color = Color3.fromHSV(h,s,v)
 			local hex = string.format("#%02X%02X%02X",color.R*0xFF,color.G*0xFF,color.B*0xFF)
 			ColorPicker.HexInput.InputBox.Text = hex
+
 			local function setDisplay()
-				Main.MainPoint.Position = UDim2.new(s,-Main.MainPoint.AbsoluteSize.X/2,1-v,-Main.MainPoint.AbsoluteSize.Y/2)
-				Main.MainPoint.ImageColor3 = Color3.fromHSV(h,s,v)
-				Background.BackgroundColor3 = Color3.fromHSV(h,1,1)
-				Display.BackgroundColor3 = Color3.fromHSV(h,s,v)
-				local x = h * Slider.AbsoluteSize.X
-				Slider.SliderPoint.Position = UDim2.new(0,x-Slider.SliderPoint.AbsoluteSize.X/2,0.5,0)
-				Slider.SliderPoint.ImageColor3 = Color3.fromHSV(h,1,1)
-				local color = Color3.fromHSV(h,s,v)
-				local r,g,b = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
+				local hueBaseColor = Color3.fromHSV(h, 1, 1)
+				Main.BackgroundColor3 = hueBaseColor
+
+				local curCol = Color3.fromHSV(h, s, v)
+				Background.BackgroundColor3 = curCol
+				Display.BackgroundColor3 = curCol
+
+				Main.MainPoint.Position = UDim2.new(s, 0, 1 - v, 0)
+				Main.MainPoint.ImageColor3 = curCol
+
+				Slider.SliderPoint.Position = UDim2.new(h, 0, 0.5, 0)
+				Slider.SliderPoint.ImageColor3 = hueBaseColor
+
+				local r,g,b = math.floor((curCol.R*255)+0.5),math.floor((curCol.G*255)+0.5),math.floor((curCol.B*255)+0.5)
 				ColorPicker.RGB.RInput.InputBox.Text = tostring(r)
 				ColorPicker.RGB.GInput.InputBox.Text = tostring(g)
 				ColorPicker.RGB.BInput.InputBox.Text = tostring(b)
-				hex = string.format("#%02X%02X%02X",color.R*0xFF,color.G*0xFF,color.B*0xFF)
+				hex = string.format("#%02X%02X%02X",curCol.R*0xFF,curCol.G*0xFF,curCol.B*0xFF)
 				ColorPicker.HexInput.InputBox.Text = hex
 			end
 			setDisplay()
+
+			local function updateMain(inputX, inputY)
+				local mainW = math.max(1, Main.AbsoluteSize.X)
+				local mainH = math.max(1, Main.AbsoluteSize.Y)
+				local localX = math.clamp(inputX - Main.AbsolutePosition.X, 0, mainW)
+				local localY = math.clamp(inputY - Main.AbsolutePosition.Y, 0, mainH)
+				s = localX / mainW
+				v = 1 - (localY / mainH)
+				setDisplay()
+				local curCol = Color3.fromHSV(h, s, v)
+				ColorPickerSettings.Color = curCol
+				pcall(function() ColorPickerSettings.Callback(curCol) end)
+				if not ColorPickerSettings.Ext then
+					SaveConfiguration()
+				end
+			end
+
+			local function updateSlider(inputX)
+				local sliderW = math.max(1, Slider.AbsoluteSize.X)
+				local localX = math.clamp(inputX - Slider.AbsolutePosition.X, 0, sliderW)
+				h = localX / sliderW
+				setDisplay()
+				local curCol = Color3.fromHSV(h, s, v)
+				ColorPickerSettings.Color = curCol
+				pcall(function() ColorPickerSettings.Callback(curCol) end)
+				if not ColorPickerSettings.Ext then
+					SaveConfiguration()
+				end
+			end
+
+			local colorPickerInputConnection = UserInputService.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					mainDragging = false
+					sliderDragging = false
+				end
+			end)
+
+			Main.InputBegan:Connect(function(input)
+				if not opened then return end
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					mainDragging = true
+					updateMain(input.Position.X, input.Position.Y)
+				end
+			end)
+
+			Main.MainPoint.InputBegan:Connect(function(input)
+				if not opened then return end
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					mainDragging = true
+					updateMain(input.Position.X, input.Position.Y)
+				end
+			end)
+
+			Slider.InputBegan:Connect(function(input)
+				if not opened then return end
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					sliderDragging = true
+					updateSlider(input.Position.X)
+				end
+			end)
+
+			if Slider:FindFirstChild("SliderPoint") then
+				Slider.SliderPoint.InputBegan:Connect(function(input)
+					if not opened then return end
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						sliderDragging = true
+						updateSlider(input.Position.X)
+				end
+				end)
+			end
+
 			ColorPicker.HexInput.InputBox.FocusLost:Connect(function()
 				if not pcall(function()
 						local r, g, b = string.match(ColorPicker.HexInput.InputBox.Text, "^#?(%w%w)(%w%w)(%w%w)$")
@@ -3587,29 +3815,29 @@ function RayfieldLibrary:CreateWindow(Settings)
 				then
 					ColorPicker.HexInput.InputBox.Text = hex
 				end
-				pcall(function()ColorPickerSettings.Callback(Color3.fromHSV(h,s,v))end)
-				local r,g,b = math.floor((h*255)+0.5),math.floor((s*255)+0.5),math.floor((v*255)+0.5)
-				ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
+				local pickedColor = Color3.fromHSV(h,s,v)
+				ColorPickerSettings.Color = pickedColor
+				pcall(function()ColorPickerSettings.Callback(pickedColor)end)
 				if not ColorPickerSettings.Ext then
 					SaveConfiguration()
 				end
 			end)
+
 			local function rgbBoxes(box,toChange)
 				local value = tonumber(box.Text)
-				local color = Color3.fromHSV(h,s,v)
-				local oldR,oldG,oldB = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
+				local curCol = Color3.fromHSV(h,s,v)
+				local oldR,oldG,oldB = math.floor((curCol.R*255)+0.5),math.floor((curCol.G*255)+0.5),math.floor((curCol.B*255)+0.5)
 				local save
 				if toChange == "R" then save = oldR;oldR = value elseif toChange == "G" then save = oldG;oldG = value else save = oldB;oldB = value end
 				if value then
 					value = math.clamp(value,0,255)
 					h,s,v = Color3.fromRGB(oldR,oldG,oldB):ToHSV()
-
 					setDisplay()
 				else
 					box.Text = tostring(save)
 				end
-				local r,g,b = math.floor((h*255)+0.5),math.floor((s*255)+0.5),math.floor((v*255)+0.5)
-				ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
+				local pickedColor = Color3.fromHSV(h,s,v)
+				ColorPickerSettings.Color = pickedColor
 				if not ColorPickerSettings.Ext then
 					SaveConfiguration()
 				end
@@ -3629,45 +3857,10 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			local colorPickerRenderConnection = RunService.RenderStepped:connect(function()
 				if mainDragging then
-					local localX = math.clamp(mouse.X-Main.AbsolutePosition.X,0,Main.AbsoluteSize.X)
-					local localY = math.clamp(mouse.Y-Main.AbsolutePosition.Y,0,Main.AbsoluteSize.Y)
-					Main.MainPoint.Position = UDim2.new(0,localX-Main.MainPoint.AbsoluteSize.X/2,0,localY-Main.MainPoint.AbsoluteSize.Y/2)
-					s = localX / Main.AbsoluteSize.X
-					v = 1 - (localY / Main.AbsoluteSize.Y)
-					Display.BackgroundColor3 = Color3.fromHSV(h,s,v)
-					Main.MainPoint.ImageColor3 = Color3.fromHSV(h,s,v)
-					Background.BackgroundColor3 = Color3.fromHSV(h,1,1)
-					local color = Color3.fromHSV(h,s,v)
-					local r,g,b = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
-					ColorPicker.RGB.RInput.InputBox.Text = tostring(r)
-					ColorPicker.RGB.GInput.InputBox.Text = tostring(g)
-					ColorPicker.RGB.BInput.InputBox.Text = tostring(b)
-					ColorPicker.HexInput.InputBox.Text = string.format("#%02X%02X%02X",color.R*0xFF,color.G*0xFF,color.B*0xFF)
-					pcall(function()ColorPickerSettings.Callback(Color3.fromHSV(h,s,v))end)
-					ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
-					if not ColorPickerSettings.Ext then
-						SaveConfiguration()
-					end
+					updateMain(mouse.X, mouse.Y)
 				end
 				if sliderDragging then
-					local localX = math.clamp(mouse.X-Slider.AbsolutePosition.X,0,Slider.AbsoluteSize.X)
-					h = localX / Slider.AbsoluteSize.X
-					Display.BackgroundColor3 = Color3.fromHSV(h,s,v)
-					Slider.SliderPoint.Position = UDim2.new(0,localX-Slider.SliderPoint.AbsoluteSize.X/2,0.5,0)
-					Slider.SliderPoint.ImageColor3 = Color3.fromHSV(h,1,1)
-					Background.BackgroundColor3 = Color3.fromHSV(h,1,1)
-					Main.MainPoint.ImageColor3 = Color3.fromHSV(h,s,v)
-					local color = Color3.fromHSV(h,s,v)
-					local r,g,b = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
-					ColorPicker.RGB.RInput.InputBox.Text = tostring(r)
-					ColorPicker.RGB.GInput.InputBox.Text = tostring(g)
-					ColorPicker.RGB.BInput.InputBox.Text = tostring(b)
-					ColorPicker.HexInput.InputBox.Text = string.format("#%02X%02X%02X",color.R*0xFF,color.G*0xFF,color.B*0xFF)
-					pcall(function()ColorPickerSettings.Callback(Color3.fromHSV(h,s,v))end)
-					ColorPickerSettings.Color = Color3.fromRGB(r,g,b)
-					if not ColorPickerSettings.Ext then
-						SaveConfiguration()
-					end
+					updateSlider(mouse.X)
 				end
 			end)
 
@@ -3711,6 +3904,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 				ColorPicker.HexInput.BackgroundColor3 = SelectedTheme.InputBackground
 				ColorPicker.HexInput.UIStroke.Color = SelectedTheme.InputStroke
+				if displayStroke then
+					displayStroke.Color = SelectedTheme.ElementStroke or Color3.fromRGB(80, 80, 80)
+				end
 			end)
 
 			return ColorPickerSettings
@@ -3846,8 +4042,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 			local ParagraphValue = {}
 
 			local Paragraph = Elements.Template.Paragraph:Clone()
-			Paragraph.Title.Text = ParagraphSettings.Title
-			Paragraph.Content.Text = ParagraphSettings.Content
+			Paragraph.Name = ParagraphSettings.Title or "Paragraph"
+			Paragraph.Title.Text = ParagraphSettings.Title or ""
+			Paragraph.Content.Text = ParagraphSettings.Content or ""
 			Paragraph.Visible = true
 			Paragraph.Parent = TabPage
 
@@ -3858,6 +4055,17 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			Paragraph.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
 			Paragraph.UIStroke.Color = SelectedTheme.SecondaryElementStroke
+			Paragraph.Title.TextColor3 = SelectedTheme.TextColor
+			Paragraph.Content.TextColor3 = SelectedTheme.TextColor
+
+			Paragraph.AutomaticSize = Enum.AutomaticSize.Y
+			Paragraph.Size = UDim2.new(1, -10, 0, 0)
+			Paragraph.Title.AutomaticSize = Enum.AutomaticSize.Y
+			Paragraph.Title.Size = UDim2.new(1, -24, 0, 0)
+			Paragraph.Title.TextWrapped = true
+			Paragraph.Content.AutomaticSize = Enum.AutomaticSize.Y
+			Paragraph.Content.Size = UDim2.new(1, -24, 0, 0)
+			Paragraph.Content.TextWrapped = true
 
 			TweenService:Create(Paragraph, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Paragraph.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
@@ -3865,13 +4073,19 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TweenService:Create(Paragraph.Content, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			function ParagraphValue:Set(NewParagraphSettings)
-				Paragraph.Title.Text = NewParagraphSettings.Title
-				Paragraph.Content.Text = NewParagraphSettings.Content
+				if NewParagraphSettings.Title then
+					Paragraph.Title.Text = NewParagraphSettings.Title
+				end
+				if NewParagraphSettings.Content then
+					Paragraph.Content.Text = NewParagraphSettings.Content
+				end
 			end
 
 			Rayfield.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
 				Paragraph.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
 				Paragraph.UIStroke.Color = SelectedTheme.SecondaryElementStroke
+				Paragraph.Title.TextColor3 = SelectedTheme.TextColor
+				Paragraph.Content.TextColor3 = SelectedTheme.TextColor
 			end)
 
 			return ParagraphValue
@@ -4768,7 +4982,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 		Rayfield.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
 			TabButton.UIStroke.Color = SelectedTheme.TabStroke
 
-			if Elements.UIPageLayout.CurrentPage == TabPage then
+			local isTabSelected = (currentActiveTabName and TabButton.Name == currentActiveTabName) or (Elements.UIPageLayout and Elements.UIPageLayout.CurrentPage and Elements.UIPageLayout.CurrentPage.Name == TabButton.Name)
+			if isTabSelected then
 				TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
 				TabButton.Image.ImageColor3 = SelectedTheme.SelectedTabTextColor
 				TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor
@@ -5007,6 +5222,7 @@ if Topbar:FindFirstChild('Settings') then
 			local settingsPage = Elements:FindFirstChild('Settings') or Elements['Rayfield Settings']
 			if settingsPage and Elements.UIPageLayout.CurrentPage == settingsPage then
 				if previousActiveTab and previousActiveTab.Parent == Elements then
+					currentActiveTabName = previousActiveTab.Name
 					Elements.UIPageLayout:JumpTo(previousActiveTab)
 					for _, OtherTabButton in ipairs(TabList:GetChildren()) do
 						if OtherTabButton.Name == previousActiveTab.Name then
