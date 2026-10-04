@@ -20,6 +20,7 @@ end
 local UserInputService = getService("UserInputService")
 local TweenService = getService("TweenService")
 local Players = getService("Players")
+local TextService = getService("TextService")
 local CoreGui = nil
 pcall(function()
 	CoreGui = getService("CoreGui")
@@ -1414,11 +1415,12 @@ do
 end
 
 local minSize = Vector2.new(1024, 768)
-local useMobileSizing
+local isMobileEnv = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (UserInputService.TouchEnabled and not UserInputService.MouseEnabled) or (Rayfield.AbsoluteSize.Y > 0 and Rayfield.AbsoluteSize.Y < 600 and UserInputService.TouchEnabled)
+local useMobileSizing = isMobileEnv or (Rayfield.AbsoluteSize.X > 0 and Rayfield.AbsoluteSize.Y > 0 and Rayfield.AbsoluteSize.X < minSize.X and Rayfield.AbsoluteSize.Y < minSize.Y)
 
-if Rayfield.AbsoluteSize.X < minSize.X and Rayfield.AbsoluteSize.Y < minSize.Y then
-	useMobileSizing = true
-end
+local defaultMobileScale = 0.55
+local defaultScale = useMobileSizing and defaultMobileScale or 1.0
+local currentSavedScale = defaultScale
 
 local useMobilePrompt = false
 if UserInputService.TouchEnabled then
@@ -1426,16 +1428,107 @@ if UserInputService.TouchEnabled then
 end
 
 local Main = Rayfield.Main
+local MainScale = Main:FindFirstChildOfClass("UIScale")
+if not MainScale then
+	MainScale = Instance.new("UIScale")
+	MainScale.Parent = Main
+end
+MainScale.Scale = currentSavedScale
+
 local MPrompt = Rayfield:FindFirstChild('Prompt')
 local Topbar = Main.Topbar
 local Elements = Main.Elements
 local LoadingFrame = Main.LoadingFrame
 local TabList = Main.TabList
 TabList.ZIndex = 10
+TabList.ClipsDescendants = true
+TabList.ScrollingEnabled = true
+TabList.ScrollingDirection = Enum.ScrollingDirection.X
+TabList.ScrollBarThickness = 2
+TabList.ScrollBarImageTransparency = 0.5
+TabList.ElasticBehavior = Enum.ElasticBehavior.Always
+TabList.AutomaticCanvasSize = Enum.AutomaticSize.X
+
+local function updateTabListCanvas()
+	local tabListLayout = TabList:FindFirstChildOfClass("UIListLayout")
+	if tabListLayout then
+		TabList.CanvasSize = UDim2.new(0, tabListLayout.AbsoluteContentSize.X + 30, 0, 0)
+	end
+end
+
+local tabListLayout = TabList:FindFirstChildOfClass("UIListLayout")
+if tabListLayout then
+	tabListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateTabListCanvas)
+end
+TabList.ChildAdded:Connect(function()
+	task.defer(updateTabListCanvas)
+end)
+TabList.ChildRemoved:Connect(function()
+	task.defer(updateTabListCanvas)
+end)
+
+Elements.UIPageLayout:GetPropertyChangedSignal("CurrentPage"):Connect(function()
+	local cur = Elements.UIPageLayout.CurrentPage
+	if not cur then return end
+	for _, btn in ipairs(TabList:GetChildren()) do
+		if btn.ClassName == "Frame" and btn.Name ~= "Template" and btn.Name ~= "Placeholder" then
+			if btn.Name == cur.Name then
+				TweenService:Create(btn, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+					BackgroundColor3 = SelectedTheme.TabBackgroundSelected,
+					BackgroundTransparency = 0
+				}):Play()
+				if btn:FindFirstChild("Title") then
+					TweenService:Create(btn.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+						TextColor3 = SelectedTheme.SelectedTabTextColor,
+						TextTransparency = 0
+					}):Play()
+				end
+				if btn:FindFirstChild("Image") then
+					TweenService:Create(btn.Image, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+						ImageColor3 = SelectedTheme.SelectedTabTextColor,
+						ImageTransparency = 0
+					}):Play()
+				end
+				if btn:FindFirstChild("UIStroke") then
+					TweenService:Create(btn.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+						Transparency = 1
+					}):Play()
+				end
+			else
+				TweenService:Create(btn, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+					BackgroundColor3 = SelectedTheme.TabBackground,
+					BackgroundTransparency = 0.7
+				}):Play()
+				if btn:FindFirstChild("Title") then
+					TweenService:Create(btn.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+						TextColor3 = SelectedTheme.TabTextColor,
+						TextTransparency = 0.2
+					}):Play()
+				end
+				if btn:FindFirstChild("Image") then
+					TweenService:Create(btn.Image, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+						ImageColor3 = SelectedTheme.TabTextColor,
+						ImageTransparency = 0.2
+					}):Play()
+				end
+				if btn:FindFirstChild("UIStroke") then
+					TweenService:Create(btn.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {
+						Transparency = 0.5
+					}):Play()
+				end
+			end
+		end
+	end
+end)
+
 Elements.ZIndex = 2
 local dragBar = Rayfield:FindFirstChild('Drag')
 local dragInteract = dragBar and dragBar.Interact or nil
 local dragBarCosmetic = dragBar and dragBar.Drag or nil
+local dragBarScale = dragBar and (dragBar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", dragBar))
+if dragBarScale then
+	dragBarScale.Scale = currentSavedScale
+end
 
 local dragOffset = 255
 local dragOffsetMobile = 150
@@ -1444,13 +1537,18 @@ local currentSavedHeight = 475
 
 local function updateDragBarPosition(instant)
 	if not dragBar or not Main then return end
-	local mainHeight = Main.Size.Y.Offset
-	if mainHeight <= 0 then mainHeight = 475 end
-	local mainWidth = Main.Size.X.Offset
-	if mainWidth <= 0 then mainWidth = 500 end
+	local curScale = MainScale and MainScale.Scale or 1
+	local mainHeight = (Main.Size.Y.Offset * curScale)
+	if mainHeight <= 0 then mainHeight = 475 * curScale end
+	local mainWidth = (Main.Size.X.Offset * curScale)
+	if mainWidth <= 0 then mainWidth = 500 * curScale end
 
-	local targetYOffset = (mainHeight / 2) + 18
+	local targetYOffset = (mainHeight / 2) + (18 * curScale)
 	local targetPos = UDim2.new(Main.Position.X.Scale, Main.Position.X.Offset, Main.Position.Y.Scale, Main.Position.Y.Offset + targetYOffset)
+
+	if dragBarScale then
+		dragBarScale.Scale = curScale
+	end
 
 	if instant then
 		dragBar.Position = targetPos
@@ -1461,8 +1559,43 @@ end
 
 local globalWidthSlider = nil
 local globalHeightSlider = nil
+local globalScaleSlider = nil
 local widthSlider = nil
 local heightSlider = nil
+local scaleSlider = nil
+
+local function applyScale(newScale, smooth)
+	if not Main then return end
+	newScale = math.clamp(tonumber(newScale) or 1, 0.25, 1.5)
+	currentSavedScale = newScale
+	if not MainScale then
+		MainScale = Main:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", Main)
+	end
+	if smooth then
+		TweenService:Create(MainScale, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = newScale}):Play()
+		if dragBarScale then
+			TweenService:Create(dragBarScale, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = newScale}):Play()
+		end
+	else
+		MainScale.Scale = newScale
+		if dragBarScale then
+			dragBarScale.Scale = newScale
+		end
+	end
+	updateDragBarPosition(not smooth)
+end
+
+function RayfieldLibrary:ChangeScale(newScale, smooth)
+	if smooth == nil then smooth = true end
+	applyScale(newScale, smooth)
+	if globalScaleSlider and globalScaleSlider.Set then
+		pcall(function() globalScaleSlider:Set(newScale) end)
+	end
+end
+
+function RayfieldLibrary:SetScale(newScale, smooth)
+	RayfieldLibrary:ChangeScale(newScale, smooth)
+end
 
 local function applySize(newW, newH, smooth)
 	if not Main then return end
@@ -1898,7 +2031,8 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 			local position = UserInputService:GetMouseLocation() + relative + offset
 			local mainH = object.Size.Y.Offset
 			if mainH <= 0 then mainH = 475 end
-			local targetDragY = position.Y + (mainH / 2) + 18
+			local curScale = MainScale and MainScale.Scale or 1
+			local targetDragY = position.Y + ((mainH * curScale) / 2) + (18 * curScale)
 
 			if enableTaptic and tapticOffset then
 				TweenService:Create(object, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Position = UDim2.fromOffset(position.X, position.Y)}):Play()
@@ -2435,6 +2569,19 @@ local function createSettings(window, winSettings)
 
 	newTab:CreateSection("Interface Scale & Dimensions")
 
+	scaleSlider = newTab:CreateSlider({
+		Name = "UI Scale",
+		Range = {0.3, 1.2},
+		Increment = 0.05,
+		Suffix = "x",
+		CurrentValue = currentSavedScale,
+		Ext = true,
+		Callback = function(Value)
+			applyScale(Value, false)
+		end
+	})
+	globalScaleSlider = scaleSlider
+
 	widthSlider = newTab:CreateSlider({
 		Name = "UI Width",
 		Range = {380, 850},
@@ -2468,6 +2615,10 @@ local function createSettings(window, winSettings)
 			widthSlider:Set(defaultWidth)
 			heightSlider:Set(defaultHeight)
 			applySize(defaultWidth, defaultHeight, true)
+			if scaleSlider then
+				scaleSlider:Set(defaultScale)
+				applyScale(defaultScale, true)
+			end
 		end
 	})
 
@@ -3005,6 +3156,15 @@ function RayfieldLibrary:CreateWindow(Settings)
 		dragBar.Visible = true
 	end
 
+	if Settings.Scale and type(Settings.Scale) == "number" then
+		currentSavedScale = math.clamp(Settings.Scale, 0.25, 1.5)
+	elseif Settings.WindowScale and type(Settings.WindowScale) == "number" then
+		currentSavedScale = math.clamp(Settings.WindowScale, 0.25, 1.5)
+	else
+		currentSavedScale = useMobileSizing and defaultMobileScale or 1.0
+	end
+	applyScale(currentSavedScale, false)
+
 	if Settings.Width and type(Settings.Width) == "number" then
 		currentSavedWidth = math.clamp(Settings.Width, 350, 1200)
 	end
@@ -3323,8 +3483,19 @@ function RayfieldLibrary:CreateWindow(Settings)
 		TabButton.Title.Text = Name
 		TabButton.Parent = TabList
 		TabButton.Title.TextWrapped = false
-		TabButton.Size = UDim2.new(0, TabButton.Title.TextBounds.X + 30, 0, 30)
 
+		local function getTabTitleWidth()
+			local textWidth = 0
+			pcall(function()
+				textWidth = TextService:GetTextSize(Name, TabButton.Title.TextSize, TabButton.Title.Font, Vector2.new(1000, 30)).X
+			end)
+			if textWidth <= 0 then
+				textWidth = TabButton.Title.TextBounds.X
+			end
+			return textWidth
+		end
+
+		local tw = getTabTitleWidth()
 		if Image and Image ~= 0 then
 			local img, rectOffset, rectSize = resolveIcon(Image)
 			TabButton.Image.Image = img
@@ -3335,15 +3506,41 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TabButton.Title.Position = UDim2.new(0, 37, 0.5, 0)
 			TabButton.Image.Visible = true
 			TabButton.Title.TextXAlignment = Enum.TextXAlignment.Left
-			TabButton.Size = UDim2.new(0, TabButton.Title.TextBounds.X + 52, 0, 30)
+			TabButton.Size = UDim2.new(0, math.max(tw + 52, 70), 0, 30)
+		else
+			TabButton.Size = UDim2.new(0, math.max(tw + 30, 50), 0, 30)
+		end
+
+		if tw <= 0 then
+			local c
+			c = TabButton.Title:GetPropertyChangedSignal("TextBounds"):Connect(function()
+				if TabButton.Title.TextBounds.X > 0 then
+					c:Disconnect()
+					local newTw = TabButton.Title.TextBounds.X
+					if Image and Image ~= 0 then
+						TabButton.Size = UDim2.new(0, math.max(newTw + 52, 70), 0, 30)
+					else
+						TabButton.Size = UDim2.new(0, math.max(newTw + 30, 50), 0, 30)
+					end
+				end
+			end)
 		end
 
 		TabButton.BackgroundTransparency = 1
 		TabButton.Title.TextTransparency = 1
 		TabButton.Image.ImageTransparency = 1
 		TabButton.UIStroke.Transparency = 1
-
 		TabButton.Visible = not Ext or false
+
+		TabButton.Interact.Size = UDim2.new(1, 0, 1, 0)
+		TabButton.Interact.Position = UDim2.new(0, 0, 0, 0)
+		TabButton.Interact.ZIndex = 25
+		TabButton.Interact.Active = true
+		TabButton.Interact.AutoButtonColor = false
+		TabButton.Title.Active = false
+		TabButton.Image.Active = false
+		TabButton.Title.ZIndex = 20
+		TabButton.Image.ZIndex = 20
 
 		local TabPage = Elements.Template:Clone()
 		TabPage.Name = Name
@@ -3367,8 +3564,15 @@ function RayfieldLibrary:CreateWindow(Settings)
 			end
 		end
 
-		TabPage.Parent = Elements
+		local isFirst = false
 		if not FirstTab and not Ext then
+			FirstTab = Name
+			currentActiveTabName = Name
+			isFirst = true
+		end
+
+		TabPage.Parent = Elements
+		if isFirst then
 			Elements.UIPageLayout.Animated = false
 			Elements.UIPageLayout:JumpTo(TabPage)
 			Elements.UIPageLayout.Animated = true
@@ -3376,18 +3580,15 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 		TabButton.UIStroke.Color = SelectedTheme.TabStroke
 
-		if Elements.UIPageLayout.CurrentPage == TabPage then
+		if isFirst then
 			TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
 			TabButton.Image.ImageColor3 = SelectedTheme.SelectedTabTextColor
 			TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor
+			TweenService:Create(TabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+			TweenService:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
+			TweenService:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+			TweenService:Create(TabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
 		else
-			TabButton.BackgroundColor3 = SelectedTheme.TabBackground
-			TabButton.Image.ImageColor3 = SelectedTheme.TabTextColor
-			TabButton.Title.TextColor3 = SelectedTheme.TabTextColor
-		end
-
-		task.wait(0.1)
-		if FirstTab or Ext then
 			TabButton.BackgroundColor3 = SelectedTheme.TabBackground
 			TabButton.Image.ImageColor3 = SelectedTheme.TabTextColor
 			TabButton.Title.TextColor3 = SelectedTheme.TabTextColor
@@ -3395,18 +3596,13 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TweenService:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0.2}):Play()
 			TweenService:Create(TabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.2}):Play()
 			TweenService:Create(TabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
-		elseif not Ext then
-			FirstTab = Name
-			currentActiveTabName = Name
-			TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
-			TabButton.Image.ImageColor3 = SelectedTheme.SelectedTabTextColor
-			TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor
-			TweenService:Create(TabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
-			TweenService:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
-			TweenService:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 		end
 
-		TabButton.Interact.MouseButton1Click:Connect(function()
+		local selectDebounce = false
+		local function selectThisTab()
+			if selectDebounce then return end
+			selectDebounce = true
+			task.delay(0.12, function() selectDebounce = false end)
 			if Minimised then return end
 			currentActiveTabName = TabButton.Name
 			TweenService:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
@@ -3432,7 +3628,41 @@ function RayfieldLibrary:CreateWindow(Settings)
 			if Elements.UIPageLayout.CurrentPage ~= TabPage then
 				Elements.UIPageLayout:JumpTo(TabPage)
 			end
-		end)
+
+			pcall(function()
+				local frameW = TabList.AbsoluteSize.X
+				if frameW > 0 then
+					local btnX = TabButton.AbsolutePosition.X - TabList.AbsolutePosition.X + TabList.CanvasPosition.X
+					local btnW = TabButton.AbsoluteSize.X
+					local targetX = math.clamp(btnX - (frameW / 2) + (btnW / 2), 0, math.max(0, TabList.AbsoluteCanvasSize.X - frameW))
+					TweenService:Create(TabList, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CanvasPosition = Vector2.new(targetX, 0)}):Play()
+				end
+			end)
+		end
+
+		TabButton.Interact.Activated:Connect(selectThisTab)
+		TabButton.Interact.MouseButton1Click:Connect(selectThisTab)
+
+		local touchStartPos = nil
+		local function onTouchBegan(input)
+			if input.UserInputType == Enum.UserInputType.Touch then
+				touchStartPos = input.Position
+			end
+		end
+		local function onTouchEnded(input)
+			if input.UserInputType == Enum.UserInputType.Touch and touchStartPos then
+				local delta = (input.Position - touchStartPos).Magnitude
+				touchStartPos = nil
+				if delta < 16 then
+					selectThisTab()
+				end
+			end
+		end
+
+		TabButton.Interact.InputBegan:Connect(onTouchBegan)
+		TabButton.Interact.InputEnded:Connect(onTouchEnded)
+		TabButton.InputBegan:Connect(onTouchBegan)
+		TabButton.InputEnded:Connect(onTouchEnded)
 
 		local Tab = {}
 
@@ -5139,8 +5369,11 @@ function RayfieldLibrary:Destroy()
 	if Rayfield then Rayfield:Destroy() end
 end
 
-Topbar.ChangeSize.MouseButton1Click:Connect(function()
-	if Debounce then return end
+local changeSizeDebounce = false
+local function toggleMinimise()
+	if Debounce or changeSizeDebounce then return end
+	changeSizeDebounce = true
+	task.delay(0.2, function() changeSizeDebounce = false end)
 	if Minimised then
 		Minimised = false
 		Maximise()
@@ -5148,7 +5381,9 @@ Topbar.ChangeSize.MouseButton1Click:Connect(function()
 		Minimised = true
 		Minimise()
 	end
-end)
+end
+Topbar.ChangeSize.MouseButton1Click:Connect(toggleMinimise)
+Topbar.ChangeSize.Activated:Connect(toggleMinimise)
 
 Main.Search.Input:GetPropertyChangedSignal('Text'):Connect(function()
 	if #Main.Search.Input.Text > 0 then
@@ -5205,7 +5440,11 @@ Main.Search.Input.FocusLost:Connect(function(enterPressed)
 	end
 end)
 
-Topbar.Search.MouseButton1Click:Connect(function()
+local searchBtnDebounce = false
+local function toggleSearch()
+	if searchBtnDebounce then return end
+	searchBtnDebounce = true
+	task.delay(0.2, function() searchBtnDebounce = false end)
 	task.spawn(function()
 		if searchOpen then
 			closeSearch()
@@ -5213,11 +5452,17 @@ Topbar.Search.MouseButton1Click:Connect(function()
 			openSearch()
 		end
 	end)
-end)
+end
+Topbar.Search.MouseButton1Click:Connect(toggleSearch)
+Topbar.Search.Activated:Connect(toggleSearch)
 
 if Topbar:FindFirstChild('Settings') then
 	local previousActiveTab = nil
-	Topbar.Settings.MouseButton1Click:Connect(function()
+	local settingsBtnDebounce = false
+	local function toggleSettings()
+		if settingsBtnDebounce then return end
+		settingsBtnDebounce = true
+		task.delay(0.2, function() settingsBtnDebounce = false end)
 		task.spawn(function()
 			local settingsPage = Elements:FindFirstChild('Settings') or Elements['Rayfield Settings']
 			if settingsPage and Elements.UIPageLayout.CurrentPage == settingsPage then
@@ -5230,7 +5475,7 @@ if Topbar:FindFirstChild('Settings') then
 							TweenService:Create(OtherTabButton.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 							TweenService:Create(OtherTabButton.Image, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
 						end
-					end
+				end
 					return
 				end
 			elseif settingsPage and Elements.UIPageLayout.CurrentPage ~= settingsPage then
@@ -5254,7 +5499,9 @@ if Topbar:FindFirstChild('Settings') then
 				Elements.UIPageLayout:JumpTo(settingsPage)
 			end
 		end)
-	end)
+	end
+	Topbar.Settings.MouseButton1Click:Connect(toggleSettings)
+	Topbar.Settings.Activated:Connect(toggleSettings)
 
 end
 
@@ -6428,9 +6675,15 @@ end
 		end
 	end
 
-		Topbar.Hide.MouseButton1Click:Connect(function()
-	setVisibility(Hidden, not useMobileSizing)
-end)
+	local hideBtnDebounce = false
+	local function toggleHide()
+		if Debounce or hideBtnDebounce then return end
+		hideBtnDebounce = true
+		task.delay(0.2, function() hideBtnDebounce = false end)
+		setVisibility(Hidden, not useMobileSizing)
+	end
+	Topbar.Hide.MouseButton1Click:Connect(toggleHide)
+	Topbar.Hide.Activated:Connect(toggleHide)
 
 hideHotkeyConnection = UserInputService.InputBegan:Connect(function(input, processed)
 	local hotkeyName = getSetting("General", "rayfieldOpen")
