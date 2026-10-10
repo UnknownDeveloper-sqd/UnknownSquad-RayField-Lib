@@ -174,11 +174,6 @@ local function secureNotify(wType, title, content)
 	secureWarnings[wType] = true
 	task.spawn(function()
 		while not RayfieldLibrary or not RayfieldLibrary.Notify do task.wait(0.5) end
-		RayfieldLibrary:Notify({
-			Title = title,
-			Content = content,
-			Duration = 8,
-		})
 	end)
 end
 local InterfaceBuild = 'UU2NX'
@@ -1319,9 +1314,10 @@ do
 		end)
 	end
 
-	local isMobileEnv = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (UserInputService.TouchEnabled and not UserInputService.MouseEnabled)
+	local isMobileEnv = UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)
+	local FilesBtn = nil
 	if not isMobileEnv then
-		local FilesBtn = Rayfield.Main.Topbar:FindFirstChild("Files")
+		FilesBtn = Rayfield.Main.Topbar:FindFirstChild("Files")
 		if not FilesBtn then
 			FilesBtn = Rayfield.Main.Topbar.Settings:Clone()
 			FilesBtn.Name = "Files"
@@ -1340,12 +1336,22 @@ do
 		FilesBtn.Visible = true
 		FilesBtn.Active = true
 		FilesBtn.ZIndex = 10
-		Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
 	else
 		local existingFiles = Rayfield.Main.Topbar:FindFirstChild("Files")
 		if existingFiles then
 			existingFiles:Destroy()
 		end
+	end
+
+	local existingGlobe = Rayfield.Main.Topbar:FindFirstChild("Globe")
+	if existingGlobe then
+		existingGlobe:Destroy()
+	end
+
+	if not isMobileEnv then
+		if FilesBtn then FilesBtn.Position = UDim2.new(1, -105, 0.5, 0) end
+		Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
+	else
 		Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -105, 0.5, 0)
 	end
 	Rayfield.Main.Topbar.Search.ImageRectOffset = Vector2.new(0, 0)
@@ -1414,9 +1420,8 @@ do
 
 end
 
-local minSize = Vector2.new(1024, 768)
-local isMobileEnv = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (UserInputService.TouchEnabled and not UserInputService.MouseEnabled) or (Rayfield.AbsoluteSize.Y > 0 and Rayfield.AbsoluteSize.Y < 600 and UserInputService.TouchEnabled)
-local useMobileSizing = isMobileEnv or (Rayfield.AbsoluteSize.X > 0 and Rayfield.AbsoluteSize.Y > 0 and Rayfield.AbsoluteSize.X < minSize.X and Rayfield.AbsoluteSize.Y < minSize.Y)
+local isMobileEnv = UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)
+local useMobileSizing = isMobileEnv
 
 local defaultMobileScale = 0.55
 local defaultScale = useMobileSizing and defaultMobileScale or 1.0
@@ -1428,6 +1433,9 @@ if UserInputService.TouchEnabled then
 end
 
 local Main = Rayfield.Main
+Main.AnchorPoint = Vector2.new(0.5, 0.5)
+Main.Position = UDim2.new(0.5, 0, 0.5, 0)
+
 local MainScale = Main:FindFirstChildOfClass("UIScale")
 if not MainScale then
 	MainScale = Instance.new("UIScale")
@@ -1571,10 +1579,10 @@ local function applyScale(newScale, smooth)
 	if not MainScale then
 		MainScale = Main:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", Main)
 	end
-	if smooth then
-		TweenService:Create(MainScale, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = newScale}):Play()
+	if smooth ~= false then
+		TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = newScale}):Play()
 		if dragBarScale then
-			TweenService:Create(dragBarScale, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = newScale}):Play()
+			TweenService:Create(dragBarScale, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = newScale}):Play()
 		end
 	else
 		MainScale.Scale = newScale
@@ -2350,6 +2358,10 @@ local lastClosedPosition = nil
 local function Hide(notify: boolean?)
 	if Main then
 		lastClosedPosition = Main.Position
+		if not MainScale then
+			MainScale = Main:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", Main)
+		end
+		TweenService:Create(MainScale, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = currentSavedScale * 0.88}):Play()
 	end
 	if MPrompt then
 		MPrompt.Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2408,8 +2420,8 @@ local function Maximise()
 	TweenService:Create(Topbar.CornerRepair, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 	TweenService:Create(Topbar.Divider, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 	TweenService:Create(dragBarCosmetic, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0.7}):Play()
-	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = useMobileSizing and UDim2.new(0, currentSavedWidth, 0, 275) or UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
-	TweenService:Create(Topbar, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play(); updateDragBarPosition()
+	TweenService:Create(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = useMobileSizing and UDim2.new(0, currentSavedWidth, 0, 275) or UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
+	TweenService:Create(Topbar, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play(); updateDragBarPosition()
 	TabList.Visible = true
 	task.wait(0.2)
 
@@ -2430,8 +2442,13 @@ local function Unhide()
 	if lastClosedPosition then
 		Main.Position = lastClosedPosition
 	end
+	if not MainScale then
+		MainScale = Main:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", Main)
+	end
+	MainScale.Scale = currentSavedScale * 0.9
+	TweenService:Create(MainScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = currentSavedScale}):Play()
 	Main.Visible = true
-	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = useMobileSizing and UDim2.new(0, currentSavedWidth, 0, 275) or UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
+	TweenService:Create(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = useMobileSizing and UDim2.new(0, currentSavedWidth, 0, 275) or UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
 	TweenService:Create(Main.Topbar, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play(); updateDragBarPosition()
 	TweenService:Create(Main.Shadow.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.6}):Play()
 	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
@@ -2499,8 +2516,8 @@ local function Minimise()
 	TweenService:Create(Main.Shadow.Image, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
 	TweenService:Create(Topbar.CornerRepair, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
 	TweenService:Create(Topbar.Divider, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
-	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play()
-	TweenService:Create(Topbar, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play()
+	TweenService:Create(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play()
+	TweenService:Create(Topbar, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play()
 
 	task.wait(0.3)
 
@@ -2577,7 +2594,7 @@ local function createSettings(window, winSettings)
 		CurrentValue = currentSavedScale,
 		Ext = true,
 		Callback = function(Value)
-			applyScale(Value, false)
+			applyScale(Value, true)
 		end
 	})
 	globalScaleSlider = scaleSlider
@@ -2590,7 +2607,7 @@ local function createSettings(window, winSettings)
 		CurrentValue = currentSavedWidth,
 		Ext = true,
 		Callback = function(Value)
-			applySize(Value, currentSavedHeight, false)
+			applySize(Value, currentSavedHeight, true)
 		end
 	})
 	globalWidthSlider = widthSlider
@@ -2603,7 +2620,7 @@ local function createSettings(window, winSettings)
 		CurrentValue = currentSavedHeight,
 		Ext = true,
 		Callback = function(Value)
-			applySize(currentSavedWidth, Value, false)
+			applySize(currentSavedWidth, Value, true)
 		end
 	})
 	globalHeightSlider = heightSlider
@@ -3227,12 +3244,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 			while not rayfieldDestroyed do
 				task.wait(math.random(180, 600))
 				if rayfieldDestroyed then break end
-				RayfieldLibrary:Notify({
-					Title = "UnknownSquad",
-					Content = "Join our Discord: https://discord.gg/Gr4bcaqmrk",
-					Duration = 7,
-					Image = 4370033185,
-				})
 			end
 		end)
 	end
@@ -3413,7 +3424,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 					KeyMain.Visible = false
 					if Settings.KeySettings.SaveKey then
 						callSafely(writefile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension, FoundKey)
-						RayfieldLibrary:Notify({Title = "Key System", Content = "The key for this script has been saved successfully.", Image = 3605522284})
 					end
 				else
 					if AttemptsRemaining == 0 then
@@ -3472,6 +3482,10 @@ function RayfieldLibrary:CreateWindow(Settings)
 	Elements.UIPageLayout.ScrollWheelInputEnabled = false
 	Elements.UIPageLayout.GamepadInputEnabled = false
 	Elements.UIPageLayout.TouchInputEnabled = false
+	Elements.UIPageLayout.Animated = true
+	Elements.UIPageLayout.EasingStyle = Enum.EasingStyle.Quart
+	Elements.UIPageLayout.EasingDirection = Enum.EasingDirection.Out
+	Elements.UIPageLayout.TweenTime = 0.32
 	TabList.Template.Visible = false
 
 	local FirstTab = false
@@ -3532,8 +3546,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 		TabButton.UIStroke.Transparency = 1
 		TabButton.Visible = not Ext or false
 
-		TabButton.Interact.Size = UDim2.new(1, 0, 1, 0)
+		TabButton.Interact.AnchorPoint = Vector2.new(0, 0)
 		TabButton.Interact.Position = UDim2.new(0, 0, 0, 0)
+		TabButton.Interact.Size = UDim2.new(1, 0, 1, 0)
 		TabButton.Interact.ZIndex = 25
 		TabButton.Interact.Active = true
 		TabButton.Interact.AutoButtonColor = false
@@ -3605,23 +3620,25 @@ function RayfieldLibrary:CreateWindow(Settings)
 			task.delay(0.12, function() selectDebounce = false end)
 			if Minimised then return end
 			currentActiveTabName = TabButton.Name
-			TweenService:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
-			TweenService:Create(TabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
-			TweenService:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
-			TweenService:Create(TabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
-			TweenService:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.TabBackgroundSelected}):Play()
-			TweenService:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextColor3 = SelectedTheme.SelectedTabTextColor}):Play()
-			TweenService:Create(TabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageColor3 = SelectedTheme.SelectedTabTextColor}):Play()
+			local tabAnim = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+			TweenService:Create(TabButton, tabAnim, {BackgroundTransparency = 0}):Play()
+			TweenService:Create(TabButton.UIStroke, tabAnim, {Transparency = 1}):Play()
+			TweenService:Create(TabButton.Title, tabAnim, {TextTransparency = 0}):Play()
+			TweenService:Create(TabButton.Image, tabAnim, {ImageTransparency = 0}):Play()
+			TweenService:Create(TabButton, tabAnim, {BackgroundColor3 = SelectedTheme.TabBackgroundSelected}):Play()
+			TweenService:Create(TabButton.Title, tabAnim, {TextColor3 = SelectedTheme.SelectedTabTextColor}):Play()
+			TweenService:Create(TabButton.Image, tabAnim, {ImageColor3 = SelectedTheme.SelectedTabTextColor}):Play()
 
 			for _, OtherTabButton in ipairs(TabList:GetChildren()) do
 				if OtherTabButton.Name ~= "Template" and OtherTabButton.ClassName == "Frame" and OtherTabButton ~= TabButton and OtherTabButton.Name ~= "Placeholder" then
-					TweenService:Create(OtherTabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.TabBackground}):Play()
-					TweenService:Create(OtherTabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextColor3 = SelectedTheme.TabTextColor}):Play()
-					TweenService:Create(OtherTabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageColor3 = SelectedTheme.TabTextColor}):Play()
-					TweenService:Create(OtherTabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.7}):Play()
-					TweenService:Create(OtherTabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0.2}):Play()
-					TweenService:Create(OtherTabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.2}):Play()
-					TweenService:Create(OtherTabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
+					local otherAnim = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+					TweenService:Create(OtherTabButton, otherAnim, {BackgroundColor3 = SelectedTheme.TabBackground}):Play()
+					TweenService:Create(OtherTabButton.Title, otherAnim, {TextColor3 = SelectedTheme.TabTextColor}):Play()
+					TweenService:Create(OtherTabButton.Image, otherAnim, {ImageColor3 = SelectedTheme.TabTextColor}):Play()
+					TweenService:Create(OtherTabButton, otherAnim, {BackgroundTransparency = 0.7}):Play()
+					TweenService:Create(OtherTabButton.Title, otherAnim, {TextTransparency = 0.2}):Play()
+					TweenService:Create(OtherTabButton.Image, otherAnim, {ImageTransparency = 0.2}):Play()
+					TweenService:Create(OtherTabButton.UIStroke, otherAnim, {Transparency = 0.5}):Play()
 				end
 			end
 
@@ -5484,13 +5501,14 @@ if Topbar:FindFirstChild('Settings') then
 
 			for _, OtherTabButton in ipairs(TabList:GetChildren()) do
 				if OtherTabButton.Name ~= "Template" and OtherTabButton.ClassName == "Frame" and OtherTabButton.Name ~= "Placeholder" then
-					TweenService:Create(OtherTabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundColor3 = SelectedTheme.TabBackground}):Play()
-					TweenService:Create(OtherTabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextColor3 = SelectedTheme.TabTextColor}):Play()
-					TweenService:Create(OtherTabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageColor3 = SelectedTheme.TabTextColor}):Play()
-					TweenService:Create(OtherTabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.7}):Play()
-					TweenService:Create(OtherTabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0.2}):Play()
-					TweenService:Create(OtherTabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.2}):Play()
-					TweenService:Create(OtherTabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
+					local otherAnim = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+					TweenService:Create(OtherTabButton, otherAnim, {BackgroundColor3 = SelectedTheme.TabBackground}):Play()
+					TweenService:Create(OtherTabButton.Title, otherAnim, {TextColor3 = SelectedTheme.TabTextColor}):Play()
+					TweenService:Create(OtherTabButton.Image, otherAnim, {ImageColor3 = SelectedTheme.TabTextColor}):Play()
+					TweenService:Create(OtherTabButton, otherAnim, {BackgroundTransparency = 0.7}):Play()
+					TweenService:Create(OtherTabButton.Title, otherAnim, {TextTransparency = 0.2}):Play()
+					TweenService:Create(OtherTabButton.Image, otherAnim, {ImageTransparency = 0.2}):Play()
+					TweenService:Create(OtherTabButton.UIStroke, otherAnim, {Transparency = 0.5}):Play()
 				end
 			end
 
@@ -5714,6 +5732,11 @@ end
 		isPhoneOrMobile = true
 	end
 
+	local existingGlobe = Topbar:FindFirstChild("Globe")
+	if existingGlobe then
+		existingGlobe:Destroy()
+	end
+
 	if isPhoneOrMobile then
 		local existingFiles = Topbar:FindFirstChild("Files")
 		if existingFiles then
@@ -5833,6 +5856,7 @@ end
 	bbLbl.TextSize = 12
 	bbLbl.TextColor3 = SelectedTheme.TextColor
 	bbLbl.TextXAlignment = Enum.TextXAlignment.Left
+	bbLbl.Active = false
 	bbLbl.Active = false
 
 	local function setBackHover(hovered)
@@ -6029,7 +6053,6 @@ end
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
 					safeSetClipboard(item.Path)
-					RayfieldLibrary:Notify({Title = "Copied", Content = "Folder path copied to clipboard", Duration = 2})
 				end
 			})
 			table.insert(options, {
@@ -6038,7 +6061,6 @@ end
 				Color = Color3.fromRGB(255, 255, 255),
 				Callback = function()
 					safeSetClipboard(item.Name)
-					RayfieldLibrary:Notify({Title = "Copied", Content = "Folder name copied to clipboard", Duration = 2})
 				end
 			})
 		else
@@ -6051,7 +6073,6 @@ end
 						pcall(function()
 							local src = readfile(item.Path)
 							loadstring(src)()
-							RayfieldLibrary:Notify({Title = "Executed", Content = "Running " .. item.Name, Duration = 2})
 						end)
 					end
 				})
@@ -6066,7 +6087,6 @@ end
 						local cb = setclipboard or toclipboard
 						if type(cb) == "function" and type(readfile) == "function" then
 							cb(readfile(item.Path))
-							RayfieldLibrary:Notify({Title = "Copied", Content = "File content copied to clipboard", Duration = 2})
 						end
 					end)
 				end
@@ -6081,7 +6101,6 @@ end
 						local cb = setclipboard or toclipboard
 						if type(cb) == "function" then
 							cb(item.Path)
-							RayfieldLibrary:Notify({Title = "Copied", Content = "Path copied to clipboard", Duration = 2})
 						end
 					end)
 				end
@@ -6096,7 +6115,6 @@ end
 						local cb = setclipboard or toclipboard
 						if type(cb) == "function" then
 							cb(item.Name)
-							RayfieldLibrary:Notify({Title = "Copied", Content = "File name copied to clipboard", Duration = 2})
 						end
 					end)
 				end
@@ -6205,6 +6223,7 @@ end
 				task.spawn(opt.Callback)
 			end
 			btn.Activated:Connect(handleAction)
+			btn.MouseButton1Click:Connect(handleAction)
 		end
 
 		local mainPos = Main.AbsolutePosition
@@ -6361,7 +6380,13 @@ end
 	        if listErr then
 	            emptyLabel.Text = "Filesystem: " .. tostring(listErr)
 	        else
-	            emptyLabel.Text = (filterText ~= "") and "No matching files" or "No files in workspace"
+	            if filterText ~= "" then
+	                emptyLabel.Text = "No matching files"
+	            elseif currentPath ~= "" then
+	                emptyLabel.Text = "Folder is empty"
+	            else
+	                emptyLabel.Text = "No files in workspace"
+	            end
 	        end
 	        emptyLabel.Parent = listFrame
 	    end
@@ -6484,13 +6509,52 @@ end
 	                end
 	            end)
 
-	            menuBtn.MouseButton1Click:Connect(function()
+	            local isScript = not item.IsFolder and (item.Ext == "LUA" or item.Ext == "LUAU" or item.Ext == "TXT" or item.Ext == "IY" or item.Ext == "")
+	            local runBtn = nil
+	            if isScript then
+	                runBtn = Instance.new("TextButton")
+	                runBtn.Name = "RunBtn"
+	                runBtn.Size = UDim2.new(0, 44, 0, 22)
+	                runBtn.Position = UDim2.new(1, -44, 0.5, 0)
+	                runBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+	                runBtn.BackgroundColor3 = SelectedTheme.ElementBackgroundHover or Color3.fromRGB(45, 45, 55)
+	                runBtn.Text = "Run"
+	                runBtn.TextColor3 = SelectedTheme.TextColor
+	                runBtn.TextSize = 11
+	                runBtn.Font = getUIFont()
+	                runBtn.AutoButtonColor = true
+	                runBtn.ZIndex = 5
+	                runBtn.Parent = row
+	                local rbCorner = Instance.new("UICorner", runBtn); rbCorner.CornerRadius = UDim.new(0, 5)
+	                local rbStroke = Instance.new("UIStroke", runBtn); rbStroke.Color = SelectedTheme.ElementStroke; rbStroke.Thickness = 1
+	                
+	                local function doRun()
+	                    pcall(function()
+	                        local src = readfile(item.Path)
+	                        loadstring(src)()
+	                    end)
+	                    runBtn.Text = "Done"
+	                    runBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60)
+	                    task.delay(0.8, function()
+	                        if runBtn and runBtn.Parent then
+	                            runBtn.Text = "Run"
+	                            runBtn.BackgroundColor3 = SelectedTheme.ElementBackgroundHover or Color3.fromRGB(45, 45, 55)
+	                        end
+	                    end)
+	                end
+	                runBtn.MouseButton1Click:Connect(doRun)
+	                runBtn.Activated:Connect(doRun)
+	            end
+
+	            local function openMenu()
 	                openContextMenu(item, menuBtn)
-	            end)
+	            end
+	            menuBtn.MouseButton1Click:Connect(openMenu)
+	            menuBtn.Activated:Connect(openMenu)
 
 	            local rowBtn = Instance.new("TextButton")
 	            rowBtn.Name = "RowClickArea"
-	            rowBtn.Size = UDim2.new(1, -36, 1, 0)
+	            rowBtn.Size = isScript and UDim2.new(1, -72, 1, 0) or UDim2.new(1, -36, 1, 0)
 	            rowBtn.Position = UDim2.new(0, 0, 0, 0)
 	            rowBtn.BackgroundTransparency = 1
 	            rowBtn.Text = ""
@@ -6531,6 +6595,7 @@ end
 	                end
 	            end
 	            rowBtn.Activated:Connect(onRowClicked)
+	            rowBtn.MouseButton1Click:Connect(onRowClicked)
 
 	            rowBtn.MouseButton2Click:Connect(function()
 	                openContextMenu(item, rowBtn)
@@ -6539,13 +6604,24 @@ end
 	    end
 	end
 
+	local backDebounce = false
 	local function goBack()
+	    if backDebounce then return end
+	    backDebounce = true
+	    task.delay(0.2, function() backDebounce = false end)
 	    closeContextMenu()
 	    currentPath = string.gsub(currentPath, "[/\\]?[^/\\]+$", "")
 	    currentPath = string.gsub(currentPath, "^[./\\]+", "")
 	    refreshList()
 	end
 	backBtn.Activated:Connect(goBack)
+	backBtn.MouseButton1Click:Connect(goBack)
+	backBtn.MouseEnter:Connect(function()
+	    TweenService:Create(backBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
+	end)
+	backBtn.MouseLeave:Connect(function()
+	    TweenService:Create(backBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
+	end)
 
 	searchInput:GetPropertyChangedSignal("Text"):Connect(function()
 	    closeContextMenu()
@@ -6554,7 +6630,11 @@ end
 
 	local previousTab = nil
 
-	filesBtn.MouseButton1Click:Connect(function()
+	local filesBtnDebounce = false
+	local function toggleWorkspacePage()
+	    if filesBtnDebounce then return end
+	    filesBtnDebounce = true
+	    task.delay(0.25, function() filesBtnDebounce = false end)
 	    closeContextMenu()
 	    local layout = Elements:FindFirstChildOfClass("UIPageLayout")
 	    if not layout then return end
@@ -6582,7 +6662,9 @@ end
 	        layout:JumpTo(workspacePage)
 	        refreshList()
 	    end
-	end)
+	end
+	filesBtn.MouseButton1Click:Connect(toggleWorkspacePage)
+	filesBtn.Activated:Connect(toggleWorkspacePage)
 
 		updateFileExplorerTheme = function()
 			if not workspacePage or not workspacePage.Parent then return end
