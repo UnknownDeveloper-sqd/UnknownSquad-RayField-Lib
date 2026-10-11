@@ -107,9 +107,11 @@ local function safeCleanOldGui(guiName, currentGui)
 			pcall(function()
 				for _, item in ipairs(container:GetChildren()) do
 					if item:IsA("ScreenGui") and item ~= currentGui then
-						local matchesId = item:GetAttribute("_rf_win_id") == guiName
-						local matchesName = (item.Name == guiName or item.Name == guiName .. "-Old" or item.Name == "Rayfield_" .. guiName)
-						if matchesId or matchesName then
+						local hasMain = (item:FindFirstChild("Main") and item.Main:FindFirstChild("Topbar")) ~= nil
+						local matchesId = (guiName and item:GetAttribute("_rf_win_id") == guiName)
+						local matchesName = guiName and (item.Name == guiName or item.Name == guiName .. "-Old" or item.Name == "Rayfield_" .. guiName)
+						local isAnyRayfield = (guiName == nil and (hasMain or item:GetAttribute("_rf_win_id") ~= nil or string.sub(item.Name, 1, 3) == "UI_" or string.sub(item.Name, 1, 9) == "Rayfield_"))
+						if matchesId or matchesName or isAnyRayfield then
 							item.Enabled = false
 							pcall(function() item:Destroy() end)
 						end
@@ -1145,6 +1147,7 @@ until buildAttempts >= 2
 
 Rayfield.Enabled = false
 
+safeCleanOldGui(nil, Rayfield)
 safeParentGui(Rayfield)
 
 if secureMode and not customAssetId then
@@ -1449,6 +1452,7 @@ end
 local Main = Rayfield.Main
 Main.AnchorPoint = Vector2.new(0.5, 0.5)
 Main.Position = UDim2.new(0.5, 0, 0.5, 0)
+Main.ClipsDescendants = true
 
 local MainScale = Main:FindFirstChildOfClass("UIScale")
 if not MainScale then
@@ -1460,6 +1464,7 @@ MainScale.Scale = currentSavedScale
 local MPrompt = Rayfield:FindFirstChild('Prompt')
 local Topbar = Main.Topbar
 local Elements = Main.Elements
+Elements.ClipsDescendants = true
 local LoadingFrame = Main.LoadingFrame
 local TabList = Main.TabList
 TabList.ZIndex = 10
@@ -2490,15 +2495,20 @@ local function Hide(notify: boolean?)
 
 	Debounce = true
 
-	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 470, 0, 0)}):Play()
-	TweenService:Create(Main.Topbar, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 470, 0, 45)}):Play()
-	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
-	TweenService:Create(Main.Topbar, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
-	TweenService:Create(Main.Topbar.Divider, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+	setTabButtonsVisible(false)
+	setElementsVisible(false)
+	Elements.Visible = false
+	TabList.Visible = false
+
+	TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, 0)}):Play()
+	TweenService:Create(Main.Topbar, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, 0)}):Play()
+	TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+	TweenService:Create(Main.Topbar, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+	TweenService:Create(Main.Topbar.Divider, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
 	TweenService:Create(Main.Topbar.CornerRepair, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
-	TweenService:Create(Main.Topbar.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
-	TweenService:Create(Main.Shadow.Image, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
-	TweenService:Create(Topbar.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+	TweenService:Create(Main.Topbar.Title, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
+	TweenService:Create(Main.Shadow.Image, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+	TweenService:Create(Topbar.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
 	if dragBarCosmetic then
 		TweenService:Create(dragBarCosmetic, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
 	end
@@ -2510,17 +2520,13 @@ local function Hide(notify: boolean?)
 
 	for _, TopbarButton in ipairs(Topbar:GetChildren()) do
 		if TopbarButton.ClassName == "ImageButton" then
-			TweenService:Create(TopbarButton, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+			TweenService:Create(TopbarButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
 		end
 	end
 
-	setTabButtonsVisible(false)
-
 	if dragInteract then dragInteract.Visible = false end
 
-	setElementsVisible(false)
-
-	task.wait(0.5)
+	task.wait(0.4)
 	Main.Visible = false
 	Debounce = false
 end
@@ -2602,6 +2608,10 @@ local function Unhide()
 		end
 	end
 
+	if not Minimised then
+		Elements.Visible = true
+		TabList.Visible = true
+	end
 	setTabButtonsVisible(true)
 
 	setElementsVisible(true)
@@ -6985,7 +6995,7 @@ end
 		if Debounce or hideBtnDebounce then return end
 		hideBtnDebounce = true
 		task.delay(0.2, function() hideBtnDebounce = false end)
-		setVisibility(Hidden, not useMobileSizing)
+		setVisibility(not Hidden, not useMobileSizing)
 	end
 	Topbar.Hide.MouseButton1Click:Connect(toggleHide)
 	Topbar.Hide.Activated:Connect(toggleHide)
