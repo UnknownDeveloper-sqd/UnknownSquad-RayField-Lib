@@ -1995,23 +1995,79 @@ local function getIcon(name : string): {id: number, imageRectSize: Vector2, imag
 
 	return asset
 end
+local urlAssetCache = {}
+local function resolveUrlAsset(url)
+	if type(url) ~= "string" then return "" end
+	local isHttp = string.sub(url, 1, 7) == "http://" or string.sub(url, 1, 8) == "https://"
+	if not isHttp then return url end
+
+	if urlAssetCache[url] then
+		return urlAssetCache[url]
+	end
+
+	if capabilities.CustomAssets and capabilities.FileSystem then
+		local hash = 0
+		for i = 1, #url do
+			hash = (hash * 31 + string.byte(url, i)) % 2147483647
+		end
+		local cleanName = "url_" .. tostring(math.abs(hash)) .. ".png"
+		local filePath = AssetPath .. "/" .. cleanName
+
+		if isfile and isfile(filePath) then
+			local ok, asset = pcall(getcustomasset, filePath)
+			if ok and asset and asset ~= "" then
+				urlAssetCache[url] = asset
+				return asset
+			end
+		end
+
+		local res = requestFunc({Url = url, Method = "GET"})
+		if res and type(res) == "table" and type(res.Body) == "string" and #res.Body > 0 then
+			ensureFolder(RayfieldFolder)
+			ensureFolder(AssetPath)
+			pcall(writefile, filePath, res.Body)
+			local ok, asset = pcall(getcustomasset, filePath)
+			if ok and asset and asset ~= "" then
+				urlAssetCache[url] = asset
+				return asset
+			end
+		end
+	end
+
+	return ""
+end
+RayfieldLibrary.ResolveUrlAsset = resolveUrlAsset
+
 local function getAssetUri(id: any): string
 	local assetUri = ""
 	if type(id) == "number" then
 		assetUri = "rbxassetid://" .. id
-	elseif type(id) == "string" and not Icons then
-	else
+	elseif type(id) == "string" then
+		if string.sub(id, 1, 7) == "http://" or string.sub(id, 1, 8) == "https://" then
+			assetUri = resolveUrlAsset(id)
+		elseif string.find(id, "rbxassetid://") == 1 or string.find(id, "rbxasset://") == 1 then
+			assetUri = id
+		elseif tonumber(id) then
+			assetUri = "rbxassetid://" .. id
+		end
 	end
 	return assetUri
 end
 
 local function isCustomAsset(value)
-	return type(value) == "string" and (string.find(value, "rbxasset://") == 1 or string.find(value, "rbxthumb://") == 1)
+	return type(value) == "string" and (string.find(value, "rbxasset://") == 1 or string.find(value, "rbxthumb://") == 1 or string.find(value, "rbxassetid://") == 1)
 end
 
 local function resolveIcon(icon)
 	if not icon or icon == 0 then
 		return "", nil, nil
+	end
+
+	if type(icon) == "string" and (string.sub(icon, 1, 7) == "http://" or string.sub(icon, 1, 8) == "https://") then
+		local custom = resolveUrlAsset(icon)
+		if custom and custom ~= "" then
+			return custom, nil, nil
+		end
 	end
 
 	if isCustomAsset(icon) then
@@ -2661,18 +2717,6 @@ local function createSettings(window, winSettings)
 		end
 	})
 
-	if capabilities.ListFiles then
-		newTab:CreateButton({
-			Name = "Exec Folder",
-			Ext = true,
-			Callback = function()
-				if toggleWorkspacePageGlobal then
-					toggleWorkspacePageGlobal()
-				end
-			end
-		})
-	end
-
 	newTab:CreateSection("Interface Scale & Dimensions")
 
 	scaleSlider = newTab:CreateSlider({
@@ -3160,7 +3204,13 @@ function RayfieldLibrary:CreateWindow(Settings)
 			local banner = Rayfield.Loading:FindFirstChild('Banner')
 			if banner then
 				if Settings.LoadingImage and tostring(Settings.LoadingImage) ~= "" then
-					banner.Image = tostring(Settings.LoadingImage)
+					local bannerSrc = tostring(Settings.LoadingImage)
+					if string.sub(bannerSrc, 1, 7) == "http://" or string.sub(bannerSrc, 1, 8) == "https://" then
+						local resolved = resolveUrlAsset(bannerSrc)
+						banner.Image = (resolved and resolved ~= "") and resolved or bannerSrc
+					else
+						banner.Image = bannerSrc
+					end
 				elseif capabilities.CustomAssets and isfile and (isfile(AssetPath .. "/1.png") or isfile("Rayfield_Assets/1.png") or isfile("1.png")) then
 					local logoFile = isfile(AssetPath .. "/1.png") and (AssetPath .. "/1.png") or (isfile("Rayfield_Assets/1.png") and "Rayfield_Assets/1.png" or "1.png")
 					banner.Image = getcustomasset(logoFile)
@@ -4415,6 +4465,43 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Paragraph.Content.Size = UDim2.new(1, -24, 0, 0)
 			Paragraph.Content.TextWrapped = true
 
+			local bannerImage = nil
+			local function applyParagraphImage(imgSrc, imgHeight, imgPos)
+				if imgSrc and imgSrc ~= "" and imgSrc ~= 0 then
+					local asset, rectOffset, rectSize = resolveIcon(imgSrc)
+					if asset and asset ~= "" then
+						if not bannerImage then
+							bannerImage = Instance.new("ImageLabel")
+							bannerImage.Name = "ParagraphImage"
+							bannerImage.BackgroundTransparency = 1
+							bannerImage.BorderSizePixel = 0
+							bannerImage.ScaleType = Enum.ScaleType.Fit
+							bannerImage.ClipsDescendants = true
+							bannerImage.ZIndex = 5
+							bannerImage.Parent = Paragraph
+
+							local imgCorner = Instance.new("UICorner", bannerImage)
+							imgCorner.CornerRadius = UDim.new(0, 6)
+						end
+						local h = tonumber(imgHeight) or 120
+						bannerImage.Size = UDim2.new(1, -24, 0, h)
+						bannerImage.Image = asset
+						if rectOffset then bannerImage.ImageRectOffset = rectOffset end
+						if rectSize then bannerImage.ImageRectSize = rectSize end
+						bannerImage.LayoutOrder = (imgPos == "Bottom" or imgPos == "bottom") and 50 or 0
+						bannerImage.Visible = true
+					elseif bannerImage then
+						bannerImage.Visible = false
+					end
+				elseif bannerImage then
+					bannerImage.Visible = false
+				end
+			end
+
+			if ParagraphSettings.Image then
+				applyParagraphImage(ParagraphSettings.Image, ParagraphSettings.ImageHeight, ParagraphSettings.ImagePosition)
+			end
+
 			TweenService:Create(Paragraph, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(Paragraph.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0}):Play()
 			TweenService:Create(Paragraph.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
@@ -4427,6 +4514,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 				if NewParagraphSettings.Content then
 					Paragraph.Content.Text = NewParagraphSettings.Content
 				end
+				if NewParagraphSettings.Image ~= nil then
+					applyParagraphImage(NewParagraphSettings.Image, NewParagraphSettings.ImageHeight or ParagraphSettings.ImageHeight, NewParagraphSettings.ImagePosition or ParagraphSettings.ImagePosition)
+				end
 			end
 
 			Rayfield.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
@@ -4437,6 +4527,52 @@ function RayfieldLibrary:CreateWindow(Settings)
 			end)
 
 			return ParagraphValue
+		end
+
+		function Tab:CreateImage(ImageSettings)
+			local ImageValue = {}
+			local imgFrame = Instance.new("Frame")
+			imgFrame.Name = ImageSettings.Name or "ImageBanner"
+			imgFrame.Size = UDim2.new(1, -10, 0, ImageSettings.Height or 140)
+			imgFrame.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+			imgFrame.BackgroundTransparency = 0.5
+			imgFrame.BorderSizePixel = 0
+			imgFrame.Parent = TabPage
+
+			local frameCorner = Instance.new("UICorner", imgFrame)
+			frameCorner.CornerRadius = UDim.new(0, 6)
+
+			local frameStroke = Instance.new("UIStroke", imgFrame)
+			frameStroke.Color = SelectedTheme.SecondaryElementStroke
+			frameStroke.Thickness = 1
+
+			local imgLabel = Instance.new("ImageLabel", imgFrame)
+			imgLabel.Name = "Image"
+			imgLabel.Size = UDim2.new(1, -8, 1, -8)
+			imgLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+			imgLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+			imgLabel.BackgroundTransparency = 1
+			imgLabel.ScaleType = Enum.ScaleType.Fit
+
+			local imgCorner = Instance.new("UICorner", imgLabel)
+			imgCorner.CornerRadius = UDim.new(0, 5)
+
+			local function updateImage(src)
+				local asset, rectOffset, rectSize = resolveIcon(src)
+				imgLabel.Image = asset or ""
+				if rectOffset then imgLabel.ImageRectOffset = rectOffset end
+				if rectSize then imgLabel.ImageRectSize = rectSize end
+			end
+
+			if ImageSettings.Image then
+				updateImage(ImageSettings.Image)
+			end
+
+			function ImageValue:Set(newSrc)
+				updateImage(newSrc)
+			end
+
+			return ImageValue
 		end
 
 		function Tab:CreateInput(InputSettings)
