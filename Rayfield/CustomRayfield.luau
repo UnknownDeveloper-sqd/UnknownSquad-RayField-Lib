@@ -6,6 +6,18 @@ local fluxus = (type(_env) == "table" and _env.fluxus) or rawget(_G, "fluxus")
 local currentWindowSettings = nil
 local allLibraryConnections = {}
 
+local capabilities = {
+	FileSystem = (type(readfile) == "function" and type(writefile) == "function" and type(isfile) == "function"),
+	FolderSupport = (type(makefolder) == "function" and type(isfolder) == "function"),
+	ListFiles = (type(listfiles) == "function" or (getgenv and type(getgenv().listfiles) == "function") or (syn and type(syn.listfiles) == "function") or (fluxus and type(fluxus.listfiles) == "function")),
+	CustomAssets = (type(getcustomasset) == "function" or type(getsynasset) == "function"),
+	Clipboard = (type(setclipboard) == "function" or type(toclipboard) == "function"),
+	Requests = (type(request) == "function" or type(http_request) == "function" or (syn and type(syn.request) == "function") or (fluxus and type(fluxus.request) == "function") or (http and type(http.request) == "function")),
+	Loadstring = (type(loadstring) == "function"),
+	ProtectedGui = (type(protectgui) == "function" or type(protect_gui) == "function" or (syn and type(syn.protect_gui) == "function")),
+	HUI = (type(gethui) == "function")
+}
+
 local function getService(name)
 	local service = game:GetService(name)
 	if cloneref then
@@ -273,7 +285,7 @@ local function callSafely(func, ...)
 end
 
 local function ensureFolder(folderPath)
-	if isfolder and not callSafely(isfolder, folderPath) then
+	if capabilities.FolderSupport and not callSafely(isfolder, folderPath) then
 		callSafely(makefolder, folderPath)
 	end
 end
@@ -282,9 +294,11 @@ local function loadSettings()
 	local file = nil
 
 	local success = pcall(function()
-		if callSafely(isfolder, RayfieldFolder) then
-			if callSafely(isfile, RayfieldFolder..'/settings'..ConfigurationExtension) then
-				file = callSafely(readfile, RayfieldFolder..'/settings'..ConfigurationExtension)
+		if capabilities.FileSystem and capabilities.FolderSupport then
+			if callSafely(isfolder, RayfieldFolder) then
+				if callSafely(isfile, RayfieldFolder..'/settings'..ConfigurationExtension) then
+					file = callSafely(readfile, RayfieldFolder..'/settings'..ConfigurationExtension)
+				end
 			end
 		end
 
@@ -333,8 +347,6 @@ local function loadSettings()
 	end)
 
 	if not success then
-		if writefile then
-		end
 	end
 end
 
@@ -345,8 +357,6 @@ loadSettings()
 
 if debugX then
 end
-
--- External telemetry removed for privacy
 
 local promptUser = 2
 
@@ -369,6 +379,7 @@ end
 
 RayfieldLibrary = {
 	Flags = {},
+	Capabilities = capabilities,
 	Theme = {
 		Default = {
 			TextColor = Color3.fromRGB(240, 240, 240),
@@ -1174,8 +1185,8 @@ do
 		customAssets[tostring(id)] = ""
 	end
 
-	local hasCustomAsset = type(getcustomasset) == "function"
-	local hasFilesystem = type(writefile) == "function" and type(makefolder) == "function" and type(isfile) == "function" and type(isfolder) == "function"
+	local hasCustomAsset = capabilities.CustomAssets
+	local hasFilesystem = capabilities.FileSystem and capabilities.FolderSupport
 
 	if hasCustomAsset and hasFilesystem then
 		local ok = pcall(function()
@@ -1245,7 +1256,7 @@ do
 
 	if customAssets["folder"] == nil or customAssets["folder"] == "" then
 		pcall(function()
-			if type(getcustomasset) == "function" then
+			if capabilities.CustomAssets then
 				if isfile and isfile("Rayfield_Assets/19.png") then
 					customAssets["folder"] = getcustomasset("Rayfield_Assets/19.png")
 				elseif isfile and isfile("19.png") then
@@ -1258,7 +1269,7 @@ do
 	end
 	if customAssets["file"] == nil or customAssets["file"] == "" then
 		pcall(function()
-			if type(getcustomasset) == "function" then
+			if capabilities.CustomAssets then
 				if isfile and isfile("Rayfield_Assets/20.png") then
 					customAssets["file"] = getcustomasset("Rayfield_Assets/20.png")
 				elseif isfile and isfile("20.png") then
@@ -1271,7 +1282,7 @@ do
 	end
 	if customAssets["run"] == nil or customAssets["run"] == "" then
 		pcall(function()
-			if type(getcustomasset) == "function" then
+			if capabilities.CustomAssets then
 				if isfile and isfile("Rayfield_Assets/21.png") then
 					customAssets["run"] = getcustomasset("Rayfield_Assets/21.png")
 				elseif isfile and isfile("21.png") then
@@ -1284,7 +1295,7 @@ do
 	end
 	if customAssets["copy"] == nil or customAssets["copy"] == "" then
 		pcall(function()
-			if type(getcustomasset) == "function" then
+			if capabilities.CustomAssets then
 				if isfile and isfile("Rayfield_Assets/22.png") then
 					customAssets["copy"] = getcustomasset("Rayfield_Assets/22.png")
 				elseif isfile and isfile("22.png") then
@@ -1297,7 +1308,7 @@ do
 	end
 	if customAssets["mobile"] == nil or customAssets["mobile"] == "" then
 		pcall(function()
-			if type(getcustomasset) == "function" then
+			if capabilities.CustomAssets then
 				if isfile and isfile("Rayfield_Assets/23.png") then
 					customAssets["mobile"] = getcustomasset("Rayfield_Assets/23.png")
 				elseif isfile and isfile("23.png") then
@@ -1309,9 +1320,15 @@ do
 		end)
 	end
 
+	if not customAssets["folder"] or customAssets["folder"] == "" then customAssets["folder"] = "rbxassetid://6034287525" end
+	if not customAssets["file"] or customAssets["file"] == "" then customAssets["file"] = "rbxassetid://6031075931" end
+	if not customAssets["run"] or customAssets["run"] == "" then customAssets["run"] = "rbxassetid://6031097225" end
+	if not customAssets["copy"] or customAssets["copy"] == "" then customAssets["copy"] = "rbxassetid://6034287527" end
+	if not customAssets["mobile"] or customAssets["mobile"] == "" then customAssets["mobile"] = "rbxassetid://10734950309" end
+
 	local isMobileEnv = UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)
 	local FilesBtn = nil
-	if not isMobileEnv then
+	if not isMobileEnv and capabilities.ListFiles then
 		FilesBtn = Rayfield.Main.Topbar:FindFirstChild("Files")
 		if not FilesBtn then
 			FilesBtn = Rayfield.Main.Topbar.Settings:Clone()
@@ -1343,7 +1360,7 @@ do
 		existingGlobe:Destroy()
 	end
 
-	if not isMobileEnv then
+	if not isMobileEnv and capabilities.ListFiles then
 		if FilesBtn then FilesBtn.Position = UDim2.new(1, -105, 0.5, 0) end
 		Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
 	else
@@ -1387,7 +1404,7 @@ do
 	if secSpacing then
 		secSpacing.Size = UDim2.new(1, 0, 0, 8)
 	end
-	if type(writefile) == "function" and type(isfile) == "function" then
+	if capabilities.FileSystem and capabilities.FolderSupport then
 		pcall(function()
 			ensureFolder(RayfieldFolder)
 			ensureFolder(AssetPath)
@@ -1402,11 +1419,13 @@ do
 		end)
 	end
 
-	if type(getcustomasset) == "function" and isfile and (isfile(AssetPath .. "/1.png") or isfile("Rayfield_Assets/1.png") or isfile("1.png")) then
+	if capabilities.CustomAssets and isfile and (isfile(AssetPath .. "/1.png") or isfile("Rayfield_Assets/1.png") or isfile("1.png")) then
 		local logoFile = isfile(AssetPath .. "/1.png") and (AssetPath .. "/1.png") or (isfile("Rayfield_Assets/1.png") and "Rayfield_Assets/1.png" or "1.png")
 		Rayfield.Loading.Banner.Image = getcustomasset(logoFile)
 	elseif customAssets["1"] and #customAssets["1"] > 0 then
 		Rayfield.Loading.Banner.Image = customAssets["1"]
+	else
+		Rayfield.Loading.Banner.Image = "rbxassetid://10734950309"
 	end
 	Rayfield.Loading.BackgroundTransparency = 1
 	Rayfield.Loading.Banner.BackgroundTransparency = 1
@@ -2143,7 +2162,7 @@ local function LoadConfiguration(Configuration)
 end
 
 local function SaveConfiguration()
-	if not CEnabled or not globalLoaded then return end
+	if not CEnabled or not globalLoaded or not capabilities.FileSystem then return end
 
 	if debugX then
 	end
@@ -2568,6 +2587,7 @@ local function Minimise()
 end
 
 local function saveSettings()
+	if not capabilities.FileSystem then return end
 	local encoded
 	local success = pcall(function()
 		encoded = HttpService:JSONEncode(settingsTable)
@@ -2641,15 +2661,17 @@ local function createSettings(window, winSettings)
 		end
 	})
 
-	newTab:CreateButton({
-		Name = "Exec Folder",
-		Ext = true,
-		Callback = function()
-			if toggleWorkspacePageGlobal then
-				toggleWorkspacePageGlobal()
+	if capabilities.ListFiles then
+		newTab:CreateButton({
+			Name = "Exec Folder",
+			Ext = true,
+			Callback = function()
+				if toggleWorkspacePageGlobal then
+					toggleWorkspacePageGlobal()
+				end
 			end
-		end
-	})
+		})
+	end
 
 	newTab:CreateSection("Interface Scale & Dimensions")
 
@@ -2997,74 +3019,76 @@ local function createSettings(window, winSettings)
 	})
 	pickerSetters["Shadow"] = function() cpShadow:Set(SelectedTheme.Shadow) end
 
-	newTab:CreateSection("GUI Configuration")
+	if capabilities.FileSystem then
+		newTab:CreateSection("GUI Configuration")
 
-	local configFilePath = RayfieldFolder .. "/GUI_Customizer_Config.json"
+		local configFilePath = RayfieldFolder .. "/GUI_Customizer_Config.json"
 
-	newTab:CreateButton({
-		Name = "Save GUI Config",
-		Ext = true,
-		Callback = function()
-			local configData = {
-				Width = currentSavedWidth,
-				Height = currentSavedHeight,
-				Font = SelectedTheme.Font and SelectedTheme.Font.Name or "Gotham",
-				ThemeColors = {
-					Background = {SelectedTheme.Background.R, SelectedTheme.Background.G, SelectedTheme.Background.B},
-					Topbar = {SelectedTheme.Topbar.R, SelectedTheme.Topbar.G, SelectedTheme.Topbar.B},
-					TextColor = {SelectedTheme.TextColor.R, SelectedTheme.TextColor.G, SelectedTheme.TextColor.B},
-					ElementBackground = {SelectedTheme.ElementBackground.R, SelectedTheme.ElementBackground.G, SelectedTheme.ElementBackground.B},
-					ElementStroke = {SelectedTheme.ElementStroke.R, SelectedTheme.ElementStroke.G, SelectedTheme.ElementStroke.B},
-					TabBackground = {SelectedTheme.TabBackground.R, SelectedTheme.TabBackground.G, SelectedTheme.TabBackground.B},
-					TabBackgroundSelected = {SelectedTheme.TabBackgroundSelected.R, SelectedTheme.TabBackgroundSelected.G, SelectedTheme.TabBackgroundSelected.B},
-					ToggleEnabled = {SelectedTheme.ToggleEnabled.R, SelectedTheme.ToggleEnabled.G, SelectedTheme.ToggleEnabled.B},
-					Shadow = {SelectedTheme.Shadow.R, SelectedTheme.Shadow.G, SelectedTheme.Shadow.B}
+		newTab:CreateButton({
+			Name = "Save GUI Config",
+			Ext = true,
+			Callback = function()
+				local configData = {
+					Width = currentSavedWidth,
+					Height = currentSavedHeight,
+					Font = SelectedTheme.Font and SelectedTheme.Font.Name or "Gotham",
+					ThemeColors = {
+						Background = {SelectedTheme.Background.R, SelectedTheme.Background.G, SelectedTheme.Background.B},
+						Topbar = {SelectedTheme.Topbar.R, SelectedTheme.Topbar.G, SelectedTheme.Topbar.B},
+						TextColor = {SelectedTheme.TextColor.R, SelectedTheme.TextColor.G, SelectedTheme.TextColor.B},
+						ElementBackground = {SelectedTheme.ElementBackground.R, SelectedTheme.ElementBackground.G, SelectedTheme.ElementBackground.B},
+						ElementStroke = {SelectedTheme.ElementStroke.R, SelectedTheme.ElementStroke.G, SelectedTheme.ElementStroke.B},
+						TabBackground = {SelectedTheme.TabBackground.R, SelectedTheme.TabBackground.G, SelectedTheme.TabBackground.B},
+						TabBackgroundSelected = {SelectedTheme.TabBackgroundSelected.R, SelectedTheme.TabBackgroundSelected.G, SelectedTheme.TabBackgroundSelected.B},
+						ToggleEnabled = {SelectedTheme.ToggleEnabled.R, SelectedTheme.ToggleEnabled.G, SelectedTheme.ToggleEnabled.B},
+						Shadow = {SelectedTheme.Shadow.R, SelectedTheme.Shadow.G, SelectedTheme.Shadow.B}
+					}
 				}
-			}
 
-			local ok, encoded = pcall(function() return HttpService:JSONEncode(configData) end)
-			if ok and writefile then
-				ensureFolder(RayfieldFolder)
-				callSafely(writefile, configFilePath, encoded)
+				local ok, encoded = pcall(function() return HttpService:JSONEncode(configData) end)
+				if ok and writefile then
+					ensureFolder(RayfieldFolder)
+					callSafely(writefile, configFilePath, encoded)
+				end
 			end
-		end
-	})
+		})
 
-	newTab:CreateButton({
-		Name = "Load GUI Config",
-		Ext = true,
-		Callback = function()
-			if isfile and isfile(configFilePath) then
-				local content = callSafely(readfile, configFilePath)
-				if content then
-					local ok, decoded = pcall(function() return HttpService:JSONDecode(content) end)
-					if ok and decoded then
-						if decoded.Width and decoded.Height then
-							widthSlider:Set(decoded.Width)
-							heightSlider:Set(decoded.Height)
-							applySize(decoded.Width, decoded.Height, true)
-						end
-						if decoded.Font and safeFont(decoded.Font) then
-							fontDropdown:Set(decoded.Font)
-						end
-						if decoded.ThemeColors then
-							for cKey, cVal in pairs(decoded.ThemeColors) do
-								if SelectedTheme[cKey] and type(cVal) == "table" then
-									local colorObj = Color3.new(cVal[1], cVal[2], cVal[3])
-									SelectedTheme[cKey] = colorObj
+		newTab:CreateButton({
+			Name = "Load GUI Config",
+			Ext = true,
+			Callback = function()
+				if isfile and isfile(configFilePath) then
+					local content = callSafely(readfile, configFilePath)
+					if content then
+						local ok, decoded = pcall(function() return HttpService:JSONDecode(content) end)
+						if ok and decoded then
+							if decoded.Width and decoded.Height then
+								widthSlider:Set(decoded.Width)
+								heightSlider:Set(decoded.Height)
+								applySize(decoded.Width, decoded.Height, true)
+							end
+							if decoded.Font and safeFont(decoded.Font) then
+								fontDropdown:Set(decoded.Font)
+							end
+							if decoded.ThemeColors then
+								for cKey, cVal in pairs(decoded.ThemeColors) do
+									if SelectedTheme[cKey] and type(cVal) == "table" then
+										local colorObj = Color3.new(cVal[1], cVal[2], cVal[3])
+										SelectedTheme[cKey] = colorObj
+									end
+								end
+								ChangeTheme(SelectedTheme)
+								for pName, setter in pairs(pickerSetters) do
+									pcall(setter)
 								end
 							end
-							ChangeTheme(SelectedTheme)
-							for pName, setter in pairs(pickerSetters) do
-								pcall(setter)
-							end
+							return
 						end
-						return
 					end
 				end
 			end
-		end
-	})
+		})
+	end
 
 	newTab:CreateSection("Keybind & System")
 
@@ -3137,11 +3161,13 @@ function RayfieldLibrary:CreateWindow(Settings)
 			if banner then
 				if Settings.LoadingImage and tostring(Settings.LoadingImage) ~= "" then
 					banner.Image = tostring(Settings.LoadingImage)
-				elseif type(getcustomasset) == "function" and isfile and (isfile(AssetPath .. "/1.png") or isfile("Rayfield_Assets/1.png") or isfile("1.png")) then
+				elseif capabilities.CustomAssets and isfile and (isfile(AssetPath .. "/1.png") or isfile("Rayfield_Assets/1.png") or isfile("1.png")) then
 					local logoFile = isfile(AssetPath .. "/1.png") and (AssetPath .. "/1.png") or (isfile("Rayfield_Assets/1.png") and "Rayfield_Assets/1.png" or "1.png")
 					banner.Image = getcustomasset(logoFile)
 				elseif customAssets["1"] and #customAssets["1"] > 0 then
 					banner.Image = customAssets["1"]
+				else
+					banner.Image = "rbxassetid://10734950309"
 				end
 				banner.BackgroundTransparency = 1
 				banner.ScaleType = Enum.ScaleType.Fit
@@ -3328,15 +3354,15 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Settings.ConfigurationSaving.FileName = tostring(game.PlaceId)
 		end
 
-		if Settings.ConfigurationSaving.Enabled == nil then
+		if Settings.ConfigurationSaving.Enabled == nil or not capabilities.FileSystem then
 			Settings.ConfigurationSaving.Enabled = false
 		end
 
 		CFileName = Settings.ConfigurationSaving.FileName
 		ConfigurationFolder = Settings.ConfigurationSaving.FolderName or ConfigurationFolder
-		CEnabled = Settings.ConfigurationSaving.Enabled
+		CEnabled = Settings.ConfigurationSaving.Enabled and capabilities.FileSystem
 
-		if Settings.ConfigurationSaving.Enabled then
+		if CEnabled then
 			ensureFolder(ConfigurationFolder)
 		end
 	end)
@@ -3378,7 +3404,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				end)
 			end
 
-			if Settings.Discord.RememberJoins then
+			if Settings.Discord.RememberJoins and capabilities.FileSystem then
 				callSafely(writefile, RayfieldFolder.."/Discord Invites".."/"..Settings.Discord.Invite..ConfigurationExtension,"Rayfield RememberJoins is true for this invite, this invite will not ask you to join again")
 			end
 		end
@@ -3410,7 +3436,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Settings.KeySettings.FileName = "No file name specified"
 		end
 
-		if callSafely(isfile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension) then
+		if capabilities.FileSystem and callSafely(isfile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension) then
 			local savedKeys = callSafely(readfile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension)
 			if savedKeys then
 				for _, MKey in ipairs(Settings.KeySettings.Key) do
@@ -3497,7 +3523,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 					task.wait(0.51)
 					Passthrough = true
 					KeyMain.Visible = false
-					if Settings.KeySettings.SaveKey then
+					if Settings.KeySettings.SaveKey and capabilities.FileSystem then
 						callSafely(writefile, RayfieldFolder.."/Key System".."/"..Settings.KeySettings.FileName..ConfigurationExtension, FoundKey)
 					end
 				else
@@ -5571,14 +5597,14 @@ if Topbar:FindFirstChild('Settings') then
 
 end
 
-	local folderAsset = customAssets["folder"] or ""
-	local fileAsset = customAssets["file"] or ""
-	local runAsset = customAssets["run"] or ""
-	local copyAsset = customAssets["copy"] or ""
-	local mobileAsset = customAssets["mobile"] or ""
+	local folderAsset = (customAssets["folder"] and customAssets["folder"] ~= "") and customAssets["folder"] or "rbxassetid://6034287525"
+	local fileAsset = (customAssets["file"] and customAssets["file"] ~= "") and customAssets["file"] or "rbxassetid://6031075931"
+	local runAsset = (customAssets["run"] and customAssets["run"] ~= "") and customAssets["run"] or "rbxassetid://6031097225"
+	local copyAsset = (customAssets["copy"] and customAssets["copy"] ~= "") and customAssets["copy"] or "rbxassetid://6034287527"
+	local mobileAsset = (customAssets["mobile"] and customAssets["mobile"] ~= "") and customAssets["mobile"] or "rbxassetid://10734950309"
 	pcall(function()
-		if type(getcustomasset) == "function" then
-			if folderAsset == "" then
+		if capabilities.CustomAssets then
+			if folderAsset == "rbxassetid://6034287525" then
 				if isfile and isfile("Rayfield_Assets/19.png") then
 					folderAsset = getcustomasset("Rayfield_Assets/19.png")
 				elseif isfile and isfile("19.png") then
@@ -5587,7 +5613,7 @@ end
 					folderAsset = customAssets["19"]
 				end
 			end
-			if fileAsset == "" then
+			if fileAsset == "rbxassetid://6031075931" then
 				if isfile and isfile("Rayfield_Assets/20.png") then
 					fileAsset = getcustomasset("Rayfield_Assets/20.png")
 				elseif isfile and isfile("20.png") then
@@ -5596,7 +5622,7 @@ end
 					fileAsset = customAssets["20"]
 				end
 			end
-			if runAsset == "" then
+			if runAsset == "rbxassetid://6031097225" then
 				if isfile and isfile("Rayfield_Assets/21.png") then
 					runAsset = getcustomasset("Rayfield_Assets/21.png")
 				elseif isfile and isfile("21.png") then
@@ -5605,7 +5631,7 @@ end
 					runAsset = customAssets["21"]
 				end
 			end
-			if copyAsset == "" then
+			if copyAsset == "rbxassetid://6034287527" then
 				if isfile and isfile("Rayfield_Assets/22.png") then
 					copyAsset = getcustomasset("Rayfield_Assets/22.png")
 				elseif isfile and isfile("22.png") then
@@ -5614,7 +5640,7 @@ end
 					copyAsset = customAssets["22"]
 				end
 			end
-			if mobileAsset == "" then
+			if mobileAsset == "rbxassetid://10734950309" then
 				if isfile and isfile("Rayfield_Assets/23.png") then
 					mobileAsset = getcustomasset("Rayfield_Assets/23.png")
 				elseif isfile and isfile("23.png") then
@@ -5651,8 +5677,8 @@ end
 		local mtScale = Instance.new("UIScale", mobileToggle)
 		mtScale.Scale = 1
 
-		local finalMobileAsset = ""
-		if type(getcustomasset) == "function" then
+		local finalMobileAsset = "rbxassetid://10734950309"
+		if capabilities.CustomAssets then
 			if isfile and isfile("Rayfield_Assets/23.png") then
 				finalMobileAsset = getcustomasset("Rayfield_Assets/23.png")
 			elseif isfile and isfile("23.png") then
@@ -5662,6 +5688,8 @@ end
 			elseif mobileAsset ~= "" then
 				finalMobileAsset = mobileAsset
 			end
+		elseif mobileAsset ~= "" then
+			finalMobileAsset = mobileAsset
 		end
 
 		local mtIcon = Instance.new("ImageLabel", mobileToggle)
@@ -5786,7 +5814,7 @@ end
 		existingGlobe:Destroy()
 	end
 
-	if isPhoneOrMobile then
+	if isPhoneOrMobile or not capabilities.ListFiles then
 		local existingFiles = Topbar:FindFirstChild("Files")
 		if existingFiles then
 			existingFiles:Destroy()
@@ -6096,24 +6124,26 @@ end
 				end)
 			end
 
-			table.insert(options, {
-				Name = "Copy Path",
-				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
-				Color = Color3.fromRGB(255, 255, 255),
-				Callback = function()
-					safeSetClipboard(item.Path)
-				end
-			})
-			table.insert(options, {
-				Name = "Copy Name",
-				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
-				Color = Color3.fromRGB(255, 255, 255),
-				Callback = function()
-					safeSetClipboard(item.Name)
-				end
-			})
+			if capabilities.Clipboard then
+				table.insert(options, {
+					Name = "Copy Path",
+					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
+					Color = Color3.fromRGB(255, 255, 255),
+					Callback = function()
+						safeSetClipboard(item.Path)
+					end
+				})
+				table.insert(options, {
+					Name = "Copy Name",
+					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
+					Color = Color3.fromRGB(255, 255, 255),
+					Callback = function()
+						safeSetClipboard(item.Name)
+					end
+				})
+			end
 		else
-			if item.Ext == "LUA" or item.Ext == "LUAU" or item.Ext == "TXT" then
+			if (item.Ext == "LUA" or item.Ext == "LUAU" or item.Ext == "TXT") and capabilities.Loadstring and capabilities.FileSystem then
 				table.insert(options, {
 					Name = "Run Script",
 					Icon = runAsset ~= "" and runAsset or "rbxassetid://6034287517",
@@ -6127,48 +6157,54 @@ end
 				})
 			end
 
-			table.insert(options, {
-				Name = "Copy File",
-				Icon = copyAsset ~= "" and copyAsset or (fileAsset ~= "" and fileAsset or "rbxassetid://6034287525"),
-				Color = Color3.fromRGB(255, 255, 255),
-				Callback = function()
-					pcall(function()
-						local cb = setclipboard or toclipboard
-						if type(cb) == "function" and type(readfile) == "function" then
-							cb(readfile(item.Path))
+			if capabilities.Clipboard then
+				if capabilities.FileSystem then
+					table.insert(options, {
+						Name = "Copy File",
+						Icon = copyAsset ~= "" and copyAsset or (fileAsset ~= "" and fileAsset or "rbxassetid://6034287525"),
+						Color = Color3.fromRGB(255, 255, 255),
+						Callback = function()
+							pcall(function()
+								local cb = setclipboard or toclipboard
+								if type(cb) == "function" and type(readfile) == "function" then
+									cb(readfile(item.Path))
+								end
+							end)
 						end
-					end)
+					})
 				end
-			})
 
-			table.insert(options, {
-				Name = "Copy Path",
-				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
-				Color = Color3.fromRGB(255, 255, 255),
-				Callback = function()
-					pcall(function()
-						local cb = setclipboard or toclipboard
-						if type(cb) == "function" then
-							cb(item.Path)
-						end
-					end)
-				end
-			})
+				table.insert(options, {
+					Name = "Copy Path",
+					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
+					Color = Color3.fromRGB(255, 255, 255),
+					Callback = function()
+						pcall(function()
+							local cb = setclipboard or toclipboard
+							if type(cb) == "function" then
+								cb(item.Path)
+							end
+						end)
+					end
+				})
 
-			table.insert(options, {
-				Name = "Copy Name",
-				Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
-				Color = Color3.fromRGB(255, 255, 255),
-				Callback = function()
-					pcall(function()
-						local cb = setclipboard or toclipboard
-						if type(cb) == "function" then
-							cb(item.Name)
-						end
-					end)
-				end
-			})
+				table.insert(options, {
+					Name = "Copy Name",
+					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
+					Color = Color3.fromRGB(255, 255, 255),
+					Callback = function()
+						pcall(function()
+							local cb = setclipboard or toclipboard
+							if type(cb) == "function" then
+								cb(item.Name)
+							end
+						end)
+					end
+				})
+			end
 		end
+
+		if #options == 0 then return end
 
 		local itemH = 28
 		local totalHeight = #options * itemH + (#options - 1) * 3 + 12
@@ -6559,8 +6595,9 @@ end
 	            end)
 
 	            local isScript = not item.IsFolder and (item.Ext == "LUA" or item.Ext == "LUAU" or item.Ext == "TXT" or item.Ext == "IY" or item.Ext == "")
+	            local canRunScript = isScript and capabilities.Loadstring and capabilities.FileSystem
 	            local runBtn = nil
-	            if isScript then
+	            if canRunScript then
 	                runBtn = Instance.new("TextButton")
 	                runBtn.Name = "RunBtn"
 	                runBtn.Size = UDim2.new(0, 44, 0, 22)
@@ -6603,7 +6640,7 @@ end
 
 	            local rowBtn = Instance.new("TextButton")
 	            rowBtn.Name = "RowClickArea"
-	            rowBtn.Size = isScript and UDim2.new(1, -72, 1, 0) or UDim2.new(1, -36, 1, 0)
+	            rowBtn.Size = canRunScript and UDim2.new(1, -72, 1, 0) or UDim2.new(1, -36, 1, 0)
 	            rowBtn.Position = UDim2.new(0, 0, 0, 0)
 	            rowBtn.BackgroundTransparency = 1
 	            rowBtn.Text = ""
@@ -6868,7 +6905,7 @@ function RayfieldLibrary:LoadConfiguration()
 		config = [[{"Toggle1adwawd":true,"ColorPicker1awd":{"B":255,"G":255,"R":255},"Slider1dawd":100,"ColorPicfsefker1":{"B":255,"G":255,"R":255},"Slidefefsr1":80,"dawdawd":"","Input1":"hh","Keybind1":"B","Dropdown1":["Ocean"]}]]
 	end
 
-	if CEnabled then
+	if CEnabled and capabilities.FileSystem then
 		pcall(function()
 			if useStudio and config then
 				LoadConfiguration(config)
