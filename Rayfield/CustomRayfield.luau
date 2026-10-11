@@ -4456,15 +4456,67 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Paragraph.Visible = true
 			Paragraph.Parent = TabPage
 
+			Paragraph.Title.RichText = (ParagraphSettings.RichText ~= false)
+			Paragraph.Content.RichText = (ParagraphSettings.RichText ~= false)
+
+			local customTitleSize = tonumber(ParagraphSettings.TitleSize or ParagraphSettings.TextSize)
+			local customContentSize = tonumber(ParagraphSettings.ContentSize or ParagraphSettings.Size)
+			if customTitleSize then
+				Paragraph.Title.TextSize = customTitleSize
+			end
+			if customContentSize then
+				Paragraph.Content.TextSize = customContentSize
+			end
+
+			local customTitleFont = ParagraphSettings.TitleFont and (safeFont(ParagraphSettings.TitleFont) or ParagraphSettings.TitleFont)
+			local customContentFont = ParagraphSettings.ContentFont and (safeFont(ParagraphSettings.ContentFont) or ParagraphSettings.ContentFont)
+			local customFont = ParagraphSettings.Font and (safeFont(ParagraphSettings.Font) or ParagraphSettings.Font)
+			if customTitleFont then
+				Paragraph.Title.Font = customTitleFont
+				Paragraph.Title:SetAttribute("KeepFont", true)
+			elseif customFont then
+				Paragraph.Title.Font = customFont
+				Paragraph.Title:SetAttribute("KeepFont", true)
+			end
+			if customContentFont then
+				Paragraph.Content.Font = customContentFont
+				Paragraph.Content:SetAttribute("KeepFont", true)
+			elseif customFont then
+				Paragraph.Content.Font = customFont
+				Paragraph.Content:SetAttribute("KeepFont", true)
+			end
+
+			if ParagraphSettings.TitleAlignment or ParagraphSettings.TextXAlignment then
+				local align = ParagraphSettings.TitleAlignment or ParagraphSettings.TextXAlignment
+				if typeof(align) == "EnumItem" then
+					Paragraph.Title.TextXAlignment = align
+				elseif type(align) == "string" and Enum.TextXAlignment[align] then
+					Paragraph.Title.TextXAlignment = Enum.TextXAlignment[align]
+				end
+			end
+			if ParagraphSettings.ContentAlignment then
+				local align = ParagraphSettings.ContentAlignment
+				if typeof(align) == "EnumItem" then
+					Paragraph.Content.TextXAlignment = align
+				elseif type(align) == "string" and Enum.TextXAlignment[align] then
+					Paragraph.Content.TextXAlignment = Enum.TextXAlignment[align]
+				end
+			end
+
+			local customTitleColor = ParagraphSettings.TitleColor or ParagraphSettings.TextColor
+			local customContentColor = ParagraphSettings.ContentColor or ParagraphSettings.TextColor
+			local customBgColor = ParagraphSettings.BackgroundColor or ParagraphSettings.Color
+			local customStrokeColor = ParagraphSettings.StrokeColor
+
 			Paragraph.BackgroundTransparency = 1
 			Paragraph.UIStroke.Transparency = 1
 			Paragraph.Title.TextTransparency = 1
 			Paragraph.Content.TextTransparency = 1
 
-			Paragraph.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
-			Paragraph.UIStroke.Color = SelectedTheme.SecondaryElementStroke
-			Paragraph.Title.TextColor3 = SelectedTheme.TextColor
-			Paragraph.Content.TextColor3 = SelectedTheme.TextColor
+			Paragraph.BackgroundColor3 = customBgColor or SelectedTheme.SecondaryElementBackground
+			Paragraph.UIStroke.Color = customStrokeColor or SelectedTheme.SecondaryElementStroke
+			Paragraph.Title.TextColor3 = customTitleColor or SelectedTheme.TextColor
+			Paragraph.Content.TextColor3 = customContentColor or SelectedTheme.TextColor
 
 			Paragraph.AutomaticSize = Enum.AutomaticSize.Y
 			Paragraph.Size = UDim2.new(1, -10, 0, 0)
@@ -4475,41 +4527,53 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Paragraph.Content.Size = UDim2.new(1, -24, 0, 0)
 			Paragraph.Content.TextWrapped = true
 
-			local bannerImage = nil
-			local function applyParagraphImage(imgSrc, imgHeight, imgPos)
-				if imgSrc and imgSrc ~= "" and imgSrc ~= 0 then
-					local asset, rectOffset, rectSize = resolveIcon(imgSrc)
-					if asset and asset ~= "" then
-						if not bannerImage then
-							bannerImage = Instance.new("ImageLabel")
-							bannerImage.Name = "ParagraphImage"
-							bannerImage.BackgroundTransparency = 1
-							bannerImage.BorderSizePixel = 0
-							bannerImage.ScaleType = Enum.ScaleType.Fit
-							bannerImage.ClipsDescendants = true
-							bannerImage.ZIndex = 5
-							bannerImage.Parent = Paragraph
-
-							local imgCorner = Instance.new("UICorner", bannerImage)
-							imgCorner.CornerRadius = UDim.new(0, 6)
+			local function applyGradient(targetInstance, gradData)
+				if not gradData or not targetInstance then return end
+				local grad = targetInstance:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+				grad.Parent = targetInstance
+				if typeof(gradData) == "ColorSequence" then
+					grad.Color = gradData
+				elseif type(gradData) == "table" then
+					if gradData[1] and typeof(gradData[1]) == "Color3" then
+						local keypoints = {}
+						local n = #gradData
+						for i, c in ipairs(gradData) do
+							local t = (n == 1) and 0 or ((i - 1) / (n - 1))
+							table.insert(keypoints, ColorSequenceKeypoint.new(t, c))
 						end
-						local h = tonumber(imgHeight) or 120
-						bannerImage.Size = UDim2.new(1, -24, 0, h)
-						bannerImage.Image = asset
-						if rectOffset then bannerImage.ImageRectOffset = rectOffset end
-						if rectSize then bannerImage.ImageRectSize = rectSize end
-						bannerImage.LayoutOrder = (imgPos == "Bottom" or imgPos == "bottom") and 50 or 0
-						bannerImage.Visible = true
-					elseif bannerImage then
-						bannerImage.Visible = false
+						grad.Color = ColorSequence.new(keypoints)
+					elseif gradData.Colors then
+						local keypoints = {}
+						local n = #gradData.Colors
+						for i, c in ipairs(gradData.Colors) do
+							local t = (n == 1) and 0 or ((i - 1) / (n - 1))
+							table.insert(keypoints, ColorSequenceKeypoint.new(t, c))
+						end
+						grad.Color = ColorSequence.new(keypoints)
+					elseif gradData.Color then
+						if typeof(gradData.Color) == "ColorSequence" then
+							grad.Color = gradData.Color
+						end
 					end
-				elseif bannerImage then
-					bannerImage.Visible = false
+					if gradData.Rotation then
+						grad.Rotation = tonumber(gradData.Rotation) or 0
+					end
+					if gradData.Transparency then
+						if typeof(gradData.Transparency) == "NumberSequence" then
+							grad.Transparency = gradData.Transparency
+						end
+					end
 				end
 			end
 
-			if ParagraphSettings.Image then
-				applyParagraphImage(ParagraphSettings.Image, ParagraphSettings.ImageHeight, ParagraphSettings.ImagePosition)
+			if ParagraphSettings.Gradient or ParagraphSettings.BackgroundGradient then
+				applyGradient(Paragraph, ParagraphSettings.Gradient or ParagraphSettings.BackgroundGradient)
+			end
+			if ParagraphSettings.TitleGradient then
+				applyGradient(Paragraph.Title, ParagraphSettings.TitleGradient)
+			end
+			if ParagraphSettings.ContentGradient or ParagraphSettings.TextGradient then
+				applyGradient(Paragraph.Content, ParagraphSettings.ContentGradient or ParagraphSettings.TextGradient)
 			end
 
 			TweenService:Create(Paragraph, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
@@ -4518,22 +4582,62 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TweenService:Create(Paragraph.Content, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
 
 			function ParagraphValue:Set(NewParagraphSettings)
+				if type(NewParagraphSettings) == "string" then
+					Paragraph.Content.Text = NewParagraphSettings
+					return
+				end
 				if NewParagraphSettings.Title then
 					Paragraph.Title.Text = NewParagraphSettings.Title
 				end
 				if NewParagraphSettings.Content then
 					Paragraph.Content.Text = NewParagraphSettings.Content
 				end
-				if NewParagraphSettings.Image ~= nil then
-					applyParagraphImage(NewParagraphSettings.Image, NewParagraphSettings.ImageHeight or ParagraphSettings.ImageHeight, NewParagraphSettings.ImagePosition or ParagraphSettings.ImagePosition)
+				if NewParagraphSettings.TitleColor or NewParagraphSettings.TextColor then
+					customTitleColor = NewParagraphSettings.TitleColor or NewParagraphSettings.TextColor
+					Paragraph.Title.TextColor3 = customTitleColor
+				end
+				if NewParagraphSettings.ContentColor or NewParagraphSettings.TextColor then
+					customContentColor = NewParagraphSettings.ContentColor or NewParagraphSettings.TextColor
+					Paragraph.Content.TextColor3 = customContentColor
+				end
+				if NewParagraphSettings.BackgroundColor or NewParagraphSettings.Color then
+					customBgColor = NewParagraphSettings.BackgroundColor or NewParagraphSettings.Color
+					Paragraph.BackgroundColor3 = customBgColor
+				end
+				if NewParagraphSettings.StrokeColor then
+					customStrokeColor = NewParagraphSettings.StrokeColor
+					Paragraph.UIStroke.Color = customStrokeColor
+				end
+				if NewParagraphSettings.TitleSize then
+					Paragraph.Title.TextSize = tonumber(NewParagraphSettings.TitleSize) or Paragraph.Title.TextSize
+				end
+				if NewParagraphSettings.ContentSize then
+					Paragraph.Content.TextSize = tonumber(NewParagraphSettings.ContentSize) or Paragraph.Content.TextSize
+				end
+				if NewParagraphSettings.Gradient or NewParagraphSettings.BackgroundGradient then
+					applyGradient(Paragraph, NewParagraphSettings.Gradient or NewParagraphSettings.BackgroundGradient)
+				end
+				if NewParagraphSettings.TitleGradient then
+					applyGradient(Paragraph.Title, NewParagraphSettings.TitleGradient)
+				end
+				if NewParagraphSettings.ContentGradient or NewParagraphSettings.TextGradient then
+					applyGradient(Paragraph.Content, NewParagraphSettings.ContentGradient or NewParagraphSettings.TextGradient)
 				end
 			end
 
 			Rayfield.Main:GetPropertyChangedSignal('BackgroundColor3'):Connect(function()
-				Paragraph.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
-				Paragraph.UIStroke.Color = SelectedTheme.SecondaryElementStroke
-				Paragraph.Title.TextColor3 = SelectedTheme.TextColor
-				Paragraph.Content.TextColor3 = SelectedTheme.TextColor
+				if not customBgColor then
+					Paragraph.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+				end
+				if not customStrokeColor then
+					Paragraph.UIStroke.Color = SelectedTheme.SecondaryElementStroke
+				end
+				if not customTitleColor then
+					Paragraph.Title.TextColor3 = SelectedTheme.TextColor
+				end
+				if not customContentColor then
+					Paragraph.Content.TextColor3 = SelectedTheme.TextColor
+				end
 			end)
 
 			return ParagraphValue
