@@ -1329,46 +1329,15 @@ do
 	if not customAssets["copy"] or customAssets["copy"] == "" then customAssets["copy"] = "rbxassetid://6034287527" end
 	if not customAssets["mobile"] or customAssets["mobile"] == "" then customAssets["mobile"] = "rbxassetid://10734950309" end
 
-	local isMobileEnv = UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)
-	local FilesBtn = nil
-	if not isMobileEnv and capabilities.ListFiles then
-		FilesBtn = Rayfield.Main.Topbar:FindFirstChild("Files")
-		if not FilesBtn then
-			FilesBtn = Rayfield.Main.Topbar.Settings:Clone()
-			FilesBtn.Name = "Files"
-			FilesBtn.Parent = Rayfield.Main.Topbar
-		end
-		FilesBtn.Position = UDim2.new(1, -105, 0.5, 0)
-		FilesBtn.Size = UDim2.new(0, 24, 0, 24)
-		FilesBtn.AnchorPoint = Vector2.new(1, 0.5)
-		if customAssets["folder"] and customAssets["folder"] ~= "" then
-			FilesBtn.Image = customAssets["folder"]
-		else
-			FilesBtn.Image = "rbxassetid://6034287525"
-		end
-		FilesBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
-		FilesBtn.ImageTransparency = 0.8
-		FilesBtn.Visible = true
-		FilesBtn.Active = true
-		FilesBtn.ZIndex = 10
-	else
-		local existingFiles = Rayfield.Main.Topbar:FindFirstChild("Files")
-		if existingFiles then
-			existingFiles:Destroy()
-		end
+	local existingFiles = Rayfield.Main.Topbar:FindFirstChild("Files")
+	if existingFiles then
+		existingFiles:Destroy()
 	end
-
 	local existingGlobe = Rayfield.Main.Topbar:FindFirstChild("Globe")
 	if existingGlobe then
 		existingGlobe:Destroy()
 	end
-
-	if not isMobileEnv and capabilities.ListFiles then
-		if FilesBtn then FilesBtn.Position = UDim2.new(1, -105, 0.5, 0) end
-		Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
-	else
-		Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -105, 0.5, 0)
-	end
+	Rayfield.Main.Topbar.Search.Position = UDim2.new(1, -105, 0.5, 0)
 	Rayfield.Main.Topbar.Search.ImageRectOffset = Vector2.new(0, 0)
 	Rayfield.Main.Topbar.Search.ImageRectSize = Vector2.new(0, 0)
 	safeApplyImage(Rayfield.Main.Elements.Template.Toggle.Switch.Shadow, customAssets["8"])
@@ -1437,16 +1406,18 @@ do
 
 end
 
-local isMobileEnv = UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)
+local isMobileEnv = UserInputService.TouchEnabled
 local useMobileSizing = isMobileEnv
 
-local defaultMobileScale = 0.55
+local defaultMobileScale = 0.85
 local defaultScale = useMobileSizing and defaultMobileScale or 1.0
 local currentSavedScale = defaultScale
 
 local useMobilePrompt = false
-if UserInputService.TouchEnabled then
-	useMobilePrompt = true
+local MPrompt = Rayfield:FindFirstChild('Prompt')
+if MPrompt then
+	pcall(function() MPrompt:Destroy() end)
+	MPrompt = nil
 end
 
 local Main = Rayfield.Main
@@ -1460,8 +1431,6 @@ if not MainScale then
 	MainScale.Parent = Main
 end
 MainScale.Scale = currentSavedScale
-
-local MPrompt = Rayfield:FindFirstChild('Prompt')
 local Topbar = Main.Topbar
 local Elements = Main.Elements
 Elements.ClipsDescendants = true
@@ -1682,9 +1651,6 @@ local keybindConnections = {}
 
 local SelectedTheme = RayfieldLibrary.Theme.Default
 local currentUIFont = Enum.Font.Gotham
-local refreshFileListGlobal = nil
-local updateFileExplorerTheme: (() -> ())? = nil
-local toggleWorkspacePageGlobal: (() -> ())? = nil
 
 local function unloadWindow()
 	rayfieldDestroyed = true
@@ -1942,9 +1908,6 @@ local function ChangeTheme(Theme)
 		end
 	end
 
-	if updateFileExplorerTheme then
-		pcall(updateFileExplorerTheme)
-	end
 
 	for _, TabButton in ipairs(TabList:GetChildren()) do
 		if TabButton.ClassName == "Frame" and TabButton.Name ~= "Placeholder" and TabButton.Name ~= "Template" then
@@ -2124,14 +2087,15 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 
 	connectFunctions()
 
+	local currentPointerPos = nil
 	local dragBegan = dragObject.InputBegan:Connect(function(input, processed)
 		if processed then return end
 
 		local inputType = input.UserInputType.Name
 		if inputType == "MouseButton1" or inputType == "Touch" then
 			dragging = true
-
-			relative = object.AbsolutePosition + object.AbsoluteSize * object.AnchorPoint - UserInputService:GetMouseLocation()
+			currentPointerPos = input.UserInputType == Enum.UserInputType.Touch and Vector2.new(input.Position.X, input.Position.Y) or UserInputService:GetMouseLocation()
+			relative = object.AbsolutePosition + object.AbsoluteSize * object.AnchorPoint - currentPointerPos
 			if enableTaptic and not Hidden then
 				TweenService:Create(dragBarCosmetic, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 110, 0, 4), BackgroundTransparency = 0}):Play()
 			end
@@ -2139,12 +2103,20 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 	end)
 	table.insert(allLibraryConnections, dragBegan)
 
+	local dragChanged = UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.Touch then
+			currentPointerPos = Vector2.new(input.Position.X, input.Position.Y)
+		end
+	end)
+	table.insert(allLibraryConnections, dragChanged)
+
 	local inputEnded = UserInputService.InputEnded:Connect(function(input)
 		if not dragging then return end
 
 		local inputType = input.UserInputType.Name
 		if inputType == "MouseButton1" or inputType == "Touch" then
 			dragging = false
+			currentPointerPos = nil
 
 			if enableTaptic and not Hidden then
 				TweenService:Create(dragBarCosmetic, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 100, 0, 4), BackgroundTransparency = 0.7}):Play()
@@ -2155,7 +2127,8 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 
 	local renderStepped = RunService.RenderStepped:Connect(function()
 		if dragging and not Hidden then
-			local position = UserInputService:GetMouseLocation() + relative + offset
+			local pointer = currentPointerPos or UserInputService:GetMouseLocation()
+			local position = pointer + relative + offset
 			local mainH = object.Size.Y.Offset
 			if mainH <= 0 then mainH = 475 end
 			local curScale = MainScale and MainScale.Scale or 1
@@ -2179,6 +2152,7 @@ local function makeDraggable(object, dragObject, enableTaptic, tapticOffset)
 	local destroyConn
 	destroyConn = object.Destroying:Connect(function()
 		if dragBegan then dragBegan:Disconnect() end
+		if dragChanged then dragChanged:Disconnect() end
 		if inputEnded then inputEnded:Disconnect() end
 		if renderStepped then renderStepped:Disconnect() end
 		if destroyConn then destroyConn:Disconnect() end
@@ -2482,15 +2456,6 @@ local function Hide(notify: boolean?)
 		end
 		TweenService:Create(MainScale, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = currentSavedScale * 0.88}):Play()
 	end
-	if MPrompt then
-		MPrompt.Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-		MPrompt.Position = UDim2.new(0.5, 0, 0, -50)
-		MPrompt.Size = UDim2.new(0, 40, 0, 10)
-		MPrompt.BackgroundTransparency = 1
-		MPrompt.Title.TextTransparency = 1
-		MPrompt.Visible = true
-	end
-
 	task.spawn(closeSearch)
 
 	Debounce = true
@@ -2511,11 +2476,6 @@ local function Hide(notify: boolean?)
 	TweenService:Create(Topbar.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
 	if dragBarCosmetic then
 		TweenService:Create(dragBarCosmetic, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
-	end
-
-	if useMobilePrompt and MPrompt then
-		TweenService:Create(MPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 120, 0, 30), Position = UDim2.new(0.5, 0, 0, 20), BackgroundTransparency = 0.3}):Play()
-		TweenService:Create(MPrompt.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 0.3}):Play()
 	end
 
 	for _, TopbarButton in ipairs(Topbar:GetChildren()) do
@@ -2540,7 +2500,7 @@ local function Maximise()
 	TweenService:Create(Topbar.CornerRepair, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 	TweenService:Create(Topbar.Divider, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 	TweenService:Create(dragBarCosmetic, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0.7}):Play()
-	TweenService:Create(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = useMobileSizing and UDim2.new(0, currentSavedWidth, 0, 275) or UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
+	TweenService:Create(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
 	TweenService:Create(Topbar, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play(); updateDragBarPosition()
 	TabList.Visible = true
 	task.wait(0.2)
@@ -2568,7 +2528,7 @@ local function Unhide()
 	MainScale.Scale = currentSavedScale * 0.9
 	TweenService:Create(MainScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = currentSavedScale}):Play()
 	Main.Visible = true
-	TweenService:Create(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = useMobileSizing and UDim2.new(0, currentSavedWidth, 0, 275) or UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
+	TweenService:Create(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
 	TweenService:Create(Main.Topbar, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play(); updateDragBarPosition()
 	TweenService:Create(Main.Shadow.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.6}):Play()
 	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
@@ -2576,16 +2536,6 @@ local function Unhide()
 	TweenService:Create(Main.Topbar.Divider, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 	TweenService:Create(Main.Topbar.CornerRepair, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 	TweenService:Create(Main.Topbar.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
-
-	if MPrompt then
-		TweenService:Create(MPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 40, 0, 10), Position = UDim2.new(0.5, 0, 0, -50), BackgroundTransparency = 1}):Play()
-		TweenService:Create(MPrompt.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
-
-		task.spawn(function()
-			task.wait(0.5)
-			MPrompt.Visible = false
-		end)
-	end
 
 	if Minimised then
 		task.spawn(Maximise)
@@ -3302,9 +3252,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 	LoadingFrame.Title.TextTransparency = 1
 	LoadingFrame.Subtitle.TextTransparency = 1
 
-	if Settings.ShowText then
-		MPrompt.Title.Text = 'Show '..Settings.ShowText
-	end
+
 
 	LoadingFrame.Version.TextTransparency = 1
 	LoadingFrame.Title.Text = Settings.LoadingTitle or "Rayfield"
@@ -5606,7 +5554,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 	task.wait(0.2)
 	LoadingFrame.Visible = false
 	task.wait(0.1)
-	TweenService:Create(Main, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = useMobileSizing and UDim2.new(0, currentSavedWidth, 0, 275) or UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
+	TweenService:Create(Main, TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentSavedWidth, 0, currentSavedHeight)}):Play()
 	TweenService:Create(Topbar, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, currentSavedWidth, 0, 45)}):Play()
 	TweenService:Create(Main.Shadow.Image, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 0.6}):Play()
 
@@ -5653,6 +5601,30 @@ function RayfieldLibrary:CreateWindow(Settings)
 		createSettings(Window, Settings)
 	end)
 
+	pcall(function()
+		local mt = Rayfield:FindFirstChild("RayfieldMobileToggle")
+		if not mt then
+			for _, child in ipairs(Rayfield:GetChildren()) do
+				if child:GetAttribute("IsMobileToggle") then
+					mt = child
+					break
+				end
+			end
+		end
+		if mt then
+			local showMobileBtn = UserInputService.TouchEnabled
+			if Settings and Settings.MobileToggle ~= nil then
+				showMobileBtn = Settings.MobileToggle
+			end
+			mt.Visible = showMobileBtn
+			local themeAccent = SelectedTheme.Accent or SelectedTheme.ToggleEnabled or SelectedTheme.SliderProgress or SelectedTheme.TextColor or Color3.fromRGB(255, 255, 255)
+			mt.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
+			local stroke = mt:FindFirstChildOfClass("UIStroke")
+			if stroke then stroke.Color = SelectedTheme.ElementStroke end
+			local icon = mt:FindFirstChild("Icon")
+			if icon then icon.ImageColor3 = themeAccent end
+		end
+	end)
 
 	return Window
 end
@@ -5904,20 +5876,30 @@ end
 
 	local mobileToggle = Rayfield:FindFirstChild("RayfieldMobileToggle")
 	if not mobileToggle then
+		for _, child in ipairs(Rayfield:GetChildren()) do
+			if child:GetAttribute("IsMobileToggle") then
+				mobileToggle = child
+				break
+			end
+		end
+	end
+
+	if not mobileToggle then
 		mobileToggle = Instance.new("ImageButton")
 		mobileToggle.Name = generateStealthName("MT")
+		mobileToggle:SetAttribute("IsMobileToggle", true)
 		pcall(function() mobileToggle.AutoLocalize = false mobileToggle.Archivable = false end)
-		mobileToggle.Size = UDim2.new(0, 50, 0, 50)
-		mobileToggle.Position = UDim2.new(0, 16, 0.5, -25)
+		mobileToggle.Size = UDim2.new(0, 48, 0, 48)
+		mobileToggle.Position = UDim2.new(0, 16, 0.5, -24)
 		mobileToggle.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
 		mobileToggle.BackgroundTransparency = 0.15
 		mobileToggle.AutoButtonColor = false
-		mobileToggle.ZIndex = 150
+		mobileToggle.ZIndex = 250
 		mobileToggle.Active = true
 		mobileToggle.Parent = Rayfield
 
 		local mtCorner = Instance.new("UICorner", mobileToggle)
-		mtCorner.CornerRadius = UDim.new(0, 25)
+		mtCorner.CornerRadius = UDim.new(0, 24)
 
 		local mtStroke = Instance.new("UIStroke", mobileToggle)
 		mtStroke.Color = SelectedTheme.ElementStroke
@@ -5944,7 +5926,7 @@ end
 
 		local mtIcon = Instance.new("ImageLabel", mobileToggle)
 		mtIcon.Name = "Icon"
-		mtIcon.Size = UDim2.new(0, 38, 0, 38)
+		mtIcon.Size = UDim2.new(0, 32, 0, 32)
 		mtIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
 		mtIcon.AnchorPoint = Vector2.new(0.5, 0.5)
 		mtIcon.BackgroundTransparency = 1
@@ -5953,12 +5935,7 @@ end
 		local themeAccent = SelectedTheme.Accent or SelectedTheme.ToggleEnabled or SelectedTheme.SliderProgress or SelectedTheme.TextColor or Color3.fromRGB(255, 255, 255)
 		mtIcon.ImageColor3 = themeAccent
 		mtIcon.ImageTransparency = 0
-		mtIcon.ZIndex = 151
-		task.spawn(function()
-			pcall(function()
-				(game:GetService("ContentProvider") :: any):PreloadAsync({mtIcon})
-			end)
-		end)
+		mtIcon.ZIndex = 251
 
 		local isDragging = false
 		local dragStart = nil
@@ -5989,10 +5966,14 @@ end
 			if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				if dragStart and startPos then
 					local delta = input.Position - dragStart
-					if math.abs(delta.X) > 4 or math.abs(delta.Y) > 4 then
+					if delta.Magnitude > 16 then
 						hasMoved = true
 					end
-					mobileToggle.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+					local cam = workspace.CurrentCamera
+					local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
+					local newX = math.clamp(startPos.X.Offset + delta.X, 0, math.max(0, vp.X - 48))
+					local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, math.max(0, vp.Y - 48))
+					mobileToggle.Position = UDim2.new(startPos.X.Scale, newX, startPos.Y.Scale, newY)
 				end
 			end
 		end)
@@ -6026,1083 +6007,57 @@ end
 				TweenService:Create(mtStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {Color = SelectedTheme.ElementStroke, Transparency = 0.2}):Play()
 			end
 		end)
-
-		local curSettings = currentWindowSettings
-		local isMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled)
-		if curSettings and curSettings.MobileToggle ~= nil then
-			isMobile = curSettings.MobileToggle
-		end
-
-		mobileToggle.Visible = isMobile
 	end
 
 	if mobileToggle then
 		local curSettings = currentWindowSettings
-		local isMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled)
+		local showMobileBtn = UserInputService.TouchEnabled
 		if curSettings and curSettings.MobileToggle ~= nil then
-			isMobile = curSettings.MobileToggle
+			showMobileBtn = curSettings.MobileToggle
 		end
-		mobileToggle.Visible = isMobile
+		mobileToggle.Visible = showMobileBtn
 
 		local ltypeConn = UserInputService.LastInputTypeChanged:Connect(function(lastInputType)
 			local s = currentWindowSettings
-			if lastInputType == Enum.UserInputType.Touch and (s == nil or s.MobileToggle == nil or s.MobileToggle == true) then
+			if (lastInputType == Enum.UserInputType.Touch) and (s == nil or s.MobileToggle ~= false) then
 				mobileToggle.Visible = true
 			end
 		end)
 		table.insert(allLibraryConnections, ltypeConn)
-	end
 
-	local curSettings = currentWindowSettings
-	local isPhoneOrMobile = (UserInputService.TouchEnabled and not (UserInputService.KeyboardEnabled and UserInputService.MouseEnabled)) or (useMobileSizing and UserInputService.TouchEnabled) or (UserInputService.TouchEnabled and not UserInputService.MouseEnabled)
-	if curSettings and (curSettings.DisableWorkspace == true or curSettings.IsMobile == true or curSettings.Mobile == true) then
-		isPhoneOrMobile = true
+		local touchStartConn = UserInputService.TouchStarted:Connect(function()
+			local s = currentWindowSettings
+			if s == nil or s.MobileToggle ~= false then
+				mobileToggle.Visible = true
+			end
+		end)
+		table.insert(allLibraryConnections, touchStartConn)
 	end
 
 	local existingGlobe = Topbar:FindFirstChild("Globe")
 	if existingGlobe then
 		existingGlobe:Destroy()
 	end
-
-	if isPhoneOrMobile or not capabilities.ListFiles then
-		local existingFiles = Topbar:FindFirstChild("Files")
-		if existingFiles then
-			existingFiles:Destroy()
-		end
-		Topbar.Search.Position = UDim2.new(1, -105, 0.5, 0)
-	else
-	local filesBtn = Topbar:FindFirstChild("Files")
-	if not filesBtn then
-	    filesBtn = Topbar.Settings:Clone()
-	    filesBtn.Name = "Files"
-	    filesBtn.Parent = Topbar
+	local existingFiles = Topbar:FindFirstChild("Files")
+	if existingFiles then
+		existingFiles:Destroy()
 	end
-	filesBtn.Position = UDim2.new(1, -105, 0.5, 0)
-	filesBtn.Size = UDim2.new(0, 24, 0, 24)
-	filesBtn.AnchorPoint = Vector2.new(1, 0.5)
-	if folderAsset ~= "" then
-	    filesBtn.Image = folderAsset
-	end
-	filesBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
-	filesBtn.ImageTransparency = 0.8
-	filesBtn.Visible = true
-	filesBtn.ZIndex = 10
-	filesBtn.Active = true
-
-	filesBtn.MouseEnter:Connect(function()
-		TweenService:Create(filesBtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.4}):Play()
-	end)
-	filesBtn.MouseLeave:Connect(function()
-		TweenService:Create(filesBtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.8}):Play()
-	end)
-
-	Topbar.Search.Position = UDim2.new(1, -135, 0.5, 0)
-
-	local function getUIFont()
-		return (SelectedTheme and SelectedTheme.Font) or currentUIFont or Enum.Font.Gotham
-	end
-
-	local refreshList
-
-	local workspacePage = Instance.new("Frame")
-	workspacePage.Name = "Workspace"
-	workspacePage.Size = UDim2.new(1, -20, 1, -10)
-	workspacePage.Position = UDim2.new(0.5, 0, 0.5, 0)
-	workspacePage.AnchorPoint = Vector2.new(0.5, 0.5)
-	workspacePage.BackgroundTransparency = 1
-	workspacePage.BorderSizePixel = 0
-	workspacePage.ClipsDescendants = true
-	workspacePage.Visible = true
-	workspacePage.Parent = Elements
-
-	local searchContainer = Instance.new("Frame")
-	searchContainer.Name = "SearchContainer"
-	searchContainer.Size = UDim2.new(1, -10, 0, 36)
-	searchContainer.Position = UDim2.new(0.5, 0, 0, 8)
-	searchContainer.AnchorPoint = Vector2.new(0.5, 0)
-	searchContainer.BackgroundColor3 = SelectedTheme.ElementBackground
-	searchContainer.BorderSizePixel = 0
-	searchContainer.Parent = workspacePage
-	local scCorner = Instance.new("UICorner", searchContainer); scCorner.CornerRadius = UDim.new(0, 6)
-	local scStroke = Instance.new("UIStroke", searchContainer); scStroke.Color = SelectedTheme.ElementStroke; scStroke.Thickness = 1
-
-	local searchInput = Instance.new("TextBox")
-	searchInput.Name = "Input"
-	searchInput.Size = UDim2.new(1, -24, 1, 0)
-	searchInput.Position = UDim2.new(0, 14, 0, 0)
-	searchInput.BackgroundTransparency = 1
-	searchInput.PlaceholderText = "Search files..."
-	searchInput.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
-	searchInput.Text = ""
-	searchInput.Font = getUIFont()
-	searchInput.TextSize = 13
-	searchInput.TextColor3 = SelectedTheme.TextColor
-	searchInput.TextXAlignment = Enum.TextXAlignment.Left
-	searchInput.ClearTextOnFocus = false
-	searchInput.Parent = searchContainer
-
-	local backBar = Instance.new("Frame")
-	backBar.Name = "BackBar"
-	backBar.Size = UDim2.new(1, -10, 0, 28)
-	backBar.Position = UDim2.new(0.5, 0, 0, 48)
-	backBar.AnchorPoint = Vector2.new(0.5, 0)
-	backBar.BackgroundTransparency = 1
-	backBar.Visible = false
-	backBar.Parent = workspacePage
-
-	local backBtn = Instance.new("TextButton")
-	backBtn.Name = "BackBtn"
-	backBtn.Size = UDim2.new(0, 76, 0, 28)
-	backBtn.Position = UDim2.new(0, 0, 0, 0)
-	backBtn.BackgroundColor3 = SelectedTheme.ElementBackground
-	backBtn.Text = ""
-	backBtn.AutoButtonColor = true
-	backBtn.Parent = backBar
-	local bbCorner = Instance.new("UICorner", backBtn); bbCorner.CornerRadius = UDim.new(0, 6)
-	local bbStroke = Instance.new("UIStroke", backBtn); bbStroke.Color = SelectedTheme.ElementStroke; bbStroke.Thickness = 1; bbStroke.Transparency = 0
-
-	local bbIcon = Instance.new("ImageLabel", backBtn)
-	bbIcon.Name = "Icon"
-	bbIcon.Size = UDim2.new(0, 14, 0, 14)
-	bbIcon.Position = UDim2.new(0, 8, 0.5, 0)
-	bbIcon.AnchorPoint = Vector2.new(0, 0.5)
-	bbIcon.BackgroundTransparency = 1
-	bbIcon.Image = (customAssets["9"] and customAssets["9"] ~= "") and customAssets["9"] or "rbxassetid://6031090990"
-	bbIcon.Rotation = 270
-	bbIcon.ImageColor3 = SelectedTheme.TextColor
-	bbIcon.ImageTransparency = 0.15
-	bbIcon.Active = false
-
-	local bbLbl = Instance.new("TextLabel", backBtn)
-	bbLbl.Name = "Label"
-	bbLbl.Size = UDim2.new(1, -26, 1, 0)
-	bbLbl.Position = UDim2.new(0, 24, 0, 0)
-	bbLbl.BackgroundTransparency = 1
-	bbLbl.Text = "Back"
-	bbLbl.Font = getUIFont()
-	bbLbl.TextSize = 12
-	bbLbl.TextColor3 = SelectedTheme.TextColor
-	bbLbl.TextXAlignment = Enum.TextXAlignment.Left
-	bbLbl.Active = false
-	bbLbl.Active = false
-
-	local function setBackHover(hovered)
-		if hovered then
-			TweenService:Create(backBtn, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {BackgroundColor3 = SelectedTheme.ElementStroke}):Play()
-			TweenService:Create(bbStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {Color = SelectedTheme.TextColor, Transparency = 0}):Play()
-			TweenService:Create(bbIcon, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {ImageTransparency = 0, ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			TweenService:Create(bbLbl, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-		else
-			TweenService:Create(backBtn, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-			TweenService:Create(bbStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {Color = SelectedTheme.ElementStroke, Transparency = 0}):Play()
-			TweenService:Create(bbIcon, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {ImageTransparency = 0.15, ImageColor3 = SelectedTheme.TextColor}):Play()
-			TweenService:Create(bbLbl, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {TextColor3 = SelectedTheme.TextColor}):Play()
-		end
-	end
-
-	backBtn.MouseEnter:Connect(function() setBackHover(true) end)
-	backBtn.MouseLeave:Connect(function() setBackHover(false) end)
-	backBtn.SelectionGained:Connect(function() setBackHover(true) end)
-	backBtn.SelectionLost:Connect(function() setBackHover(false) end)
-
-	local curDirLabel = Instance.new("TextLabel")
-	curDirLabel.Name = "CurDir"
-	curDirLabel.Text = ""
-	curDirLabel.Font = getUIFont()
-	curDirLabel.TextSize = 12
-	curDirLabel.TextColor3 = SelectedTheme.TextColor
-	curDirLabel.TextTransparency = 0.15
-	curDirLabel.TextXAlignment = Enum.TextXAlignment.Left
-	curDirLabel.TextTruncate = Enum.TextTruncate.AtEnd
-	curDirLabel.Position = UDim2.new(0, 84, 0, 0)
-	curDirLabel.Size = UDim2.new(1, -84, 0, 28)
-	curDirLabel.BackgroundColor3 = SelectedTheme.ElementBackground
-	curDirLabel.BackgroundTransparency = 0.2
-	curDirLabel.Parent = backBar
-	local cdCorner = Instance.new("UICorner", curDirLabel); cdCorner.CornerRadius = UDim.new(0, 6)
-	local cdStroke = Instance.new("UIStroke", curDirLabel); cdStroke.Color = SelectedTheme.ElementStroke; cdStroke.Thickness = 1; cdStroke.Transparency = 0.2
-	local cdPadding = Instance.new("UIPadding", curDirLabel); cdPadding.PaddingLeft = UDim.new(0, 10); cdPadding.PaddingRight = UDim.new(0, 10)
-
-	local listFrame = Instance.new("ScrollingFrame")
-	listFrame.Name = "FileList"
-	listFrame.Size = UDim2.new(1, -10, 1, -54)
-	listFrame.Position = UDim2.new(0.5, 0, 0, 50)
-	listFrame.AnchorPoint = Vector2.new(0.5, 0)
-	listFrame.BackgroundTransparency = 1
-	listFrame.BorderSizePixel = 0
-	listFrame.ScrollBarThickness = 4
-	listFrame.ScrollBarImageColor3 = SelectedTheme.ElementStroke
-	listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-	listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	listFrame.Parent = workspacePage
-
-	local listLayout = Instance.new("UIListLayout")
-	listLayout.Padding = UDim.new(0, 4)
-	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	listLayout.Parent = listFrame
-
-	local currentPath = ""
-	local selectedItem = nil
-
-	local function formatSize(bytes)
-	    if not bytes or bytes <= 0 then return "-" end
-	    if bytes < 1024 then
-	        return bytes .. " B"
-	    elseif bytes < 1048576 then
-	        return string.format("%.1f KB", bytes / 1024)
-	    else
-	        return string.format("%.1f MB", bytes / 1048576)
-	    end
-	end
-
-	local function getExtension(name)
-	    local ext = string.match(name, "%.([^%.]+)$")
-	    return ext and string.upper(ext) or ""
-	end
-
-	local function cleanFileName(fullPath)
-	    local name = string.gsub(fullPath, "\\", "/")
-	    return string.match(name, "([^/]+)$") or fullPath
-	end
-
-	local contextOverlay = Instance.new("TextButton")
-	contextOverlay.Name = "ContextOverlay"
-	contextOverlay.Size = UDim2.new(1, 0, 1, 0)
-	contextOverlay.Position = UDim2.new(0, 0, 0, 0)
-	contextOverlay.BackgroundTransparency = 1
-	contextOverlay.Text = ""
-	contextOverlay.Visible = false
-	contextOverlay.ZIndex = 80
-	contextOverlay.Parent = Main
-
-	local contextMenu = Instance.new("Frame")
-	contextMenu.Name = "FileContextMenu"
-	contextMenu.Size = UDim2.new(0, 168, 0, 100)
-	contextMenu.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
-	contextMenu.BackgroundTransparency = 1
-	contextMenu.BorderSizePixel = 0
-	contextMenu.ClipsDescendants = false
-	contextMenu.Visible = false
-	contextMenu.ZIndex = 90
-	contextMenu.Parent = Main
-
-	local cmScale = Instance.new("UIScale", contextMenu)
-	cmScale.Scale = 1
-
-	local cmCorner = Instance.new("UICorner", contextMenu)
-	cmCorner.CornerRadius = UDim.new(0, 8)
-
-	local cmStroke = Instance.new("UIStroke", contextMenu)
-	cmStroke.Color = SelectedTheme.ElementStroke
-	cmStroke.Thickness = 1
-	cmStroke.Transparency = 1
-
-	local cmLayout = Instance.new("UIListLayout", contextMenu)
-	cmLayout.Padding = UDim.new(0, 3)
-	cmLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-	local cmPadding = Instance.new("UIPadding", contextMenu)
-	cmPadding.PaddingTop = UDim.new(0, 5)
-	cmPadding.PaddingBottom = UDim.new(0, 5)
-	cmPadding.PaddingLeft = UDim.new(0, 5)
-	cmPadding.PaddingRight = UDim.new(0, 5)
-
-	local function closeContextMenu()
-		if not contextMenu.Visible then return end
-		contextOverlay.Visible = false
-		local tw = TweenService:Create(contextMenu, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			BackgroundTransparency = 1
-		})
-		local twScale = TweenService:Create(cmScale, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Scale = 0.88
-		})
-		local twStroke = TweenService:Create(cmStroke, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Transparency = 1
-		})
-		tw:Play()
-		twScale:Play()
-		twStroke:Play()
-		for _, child in ipairs(contextMenu:GetChildren()) do
-			if child:IsA("TextButton") then
-				local icon = child:FindFirstChildOfClass("ImageLabel")
-				local lbl = child:FindFirstChildOfClass("TextLabel")
-				local st = child:FindFirstChildOfClass("UIStroke")
-				if icon then TweenService:Create(icon, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {ImageTransparency = 1}):Play() end
-				if lbl then TweenService:Create(lbl, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {TextTransparency = 1}):Play() end
-				if st then TweenService:Create(st, TweenInfo.new(0.15, Enum.EasingStyle.Quart), {Transparency = 1}):Play() end
-			end
-		end
-		tw.Completed:Connect(function()
-			if not contextOverlay.Visible then
-				contextMenu.Visible = false
-				cmScale.Scale = 1
-				for _, child in ipairs(contextMenu:GetChildren()) do
-					if child:IsA("TextButton") then child:Destroy() end
-				end
-			end
-		end)
-	end
-
-	contextOverlay.MouseButton1Click:Connect(closeContextMenu)
-	contextOverlay.MouseButton2Click:Connect(closeContextMenu)
-
-	local function openContextMenu(item, triggerBtn)
-		for _, child in ipairs(contextMenu:GetChildren()) do
-			if child:IsA("TextButton") then child:Destroy() end
-		end
-
-		local options = {}
-
-		if item.IsFolder then
-			table.insert(options, {
-				Name = "Open Folder",
-				Icon = (folderAsset and folderAsset ~= "") and folderAsset or "rbxassetid://6034287525",
-				Color = Color3.fromRGB(255, 255, 255),
-				Callback = function()
-					local targetPath = string.gsub(item.Path or item.Name, "\\", "/")
-					targetPath = string.gsub(targetPath, "^[./\\]+", "")
-					currentPath = targetPath
-					refreshList()
-				end
-			})
-			local function safeSetClipboard(text)
-				pcall(function()
-					local cb = setclipboard or toclipboard
-					if type(cb) == "function" then
-						cb(text)
-					end
-				end)
-			end
-
-			if capabilities.Clipboard then
-				table.insert(options, {
-					Name = "Copy Path",
-					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
-					Color = Color3.fromRGB(255, 255, 255),
-					Callback = function()
-						safeSetClipboard(item.Path)
-					end
-				})
-				table.insert(options, {
-					Name = "Copy Name",
-					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
-					Color = Color3.fromRGB(255, 255, 255),
-					Callback = function()
-						safeSetClipboard(item.Name)
-					end
-				})
-			end
-		else
-			if (item.Ext == "LUA" or item.Ext == "LUAU" or item.Ext == "TXT") and capabilities.Loadstring and capabilities.FileSystem then
-				table.insert(options, {
-					Name = "Run Script",
-					Icon = runAsset ~= "" and runAsset or "rbxassetid://6034287517",
-					Color = Color3.fromRGB(255, 255, 255),
-					Callback = function()
-						pcall(function()
-							local src = readfile(item.Path)
-							loadstring(src)()
-						end)
-					end
-				})
-			end
-
-			if capabilities.Clipboard then
-				if capabilities.FileSystem then
-					table.insert(options, {
-						Name = "Copy File",
-						Icon = copyAsset ~= "" and copyAsset or (fileAsset ~= "" and fileAsset or "rbxassetid://6034287525"),
-						Color = Color3.fromRGB(255, 255, 255),
-						Callback = function()
-							pcall(function()
-								local cb = setclipboard or toclipboard
-								if type(cb) == "function" and type(readfile) == "function" then
-									cb(readfile(item.Path))
-								end
-							end)
-						end
-					})
-				end
-
-				table.insert(options, {
-					Name = "Copy Path",
-					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287527",
-					Color = Color3.fromRGB(255, 255, 255),
-					Callback = function()
-						pcall(function()
-							local cb = setclipboard or toclipboard
-							if type(cb) == "function" then
-								cb(item.Path)
-							end
-						end)
-					end
-				})
-
-				table.insert(options, {
-					Name = "Copy Name",
-					Icon = copyAsset ~= "" and copyAsset or "rbxassetid://6034287525",
-					Color = Color3.fromRGB(255, 255, 255),
-					Callback = function()
-						pcall(function()
-							local cb = setclipboard or toclipboard
-							if type(cb) == "function" then
-								cb(item.Name)
-							end
-						end)
-					end
-				})
-			end
-		end
-
-		if #options == 0 then return end
-
-		local itemH = 28
-		local totalHeight = #options * itemH + (#options - 1) * 3 + 12
-		local menuWidth = 168
-
-		for idx, opt in ipairs(options) do
-			local btn = Instance.new("TextButton")
-			btn.Name = opt.Name
-			btn.Size = UDim2.new(1, 0, 0, itemH)
-			btn.BackgroundColor3 = SelectedTheme.ElementStroke
-			btn.BackgroundTransparency = 1
-			btn.Text = ""
-			btn.AutoButtonColor = true
-			btn.ZIndex = 95
-			btn.Parent = contextMenu
-
-			local bCorner = Instance.new("UICorner", btn)
-			bCorner.CornerRadius = UDim.new(0, 6)
-
-			local bStroke = Instance.new("UIStroke", btn)
-			bStroke.Color = SelectedTheme.TextColor
-			bStroke.Thickness = 1
-			bStroke.Transparency = 1
-
-			local icon = Instance.new("ImageLabel")
-			icon.Size = UDim2.new(0, 16, 0, 16)
-			icon.Position = UDim2.new(0, 10, 0.5, 0)
-			icon.AnchorPoint = Vector2.new(0, 0.5)
-			icon.BackgroundTransparency = 1
-			icon.Image = opt.Icon
-			icon.ImageColor3 = SelectedTheme.TextColor
-			icon.ImageTransparency = 0.15
-			icon.ZIndex = 96
-			icon.Active = false
-			icon.Parent = btn
-
-			local lbl = Instance.new("TextLabel")
-			lbl.Size = UDim2.new(1, -34, 1, 0)
-			lbl.Position = UDim2.new(0, 34, 0, 0)
-			lbl.BackgroundTransparency = 1
-			lbl.Text = opt.Name
-			lbl.Font = getUIFont()
-			lbl.TextSize = 12
-			lbl.TextColor3 = SelectedTheme.TextColor
-			lbl.TextXAlignment = Enum.TextXAlignment.Left
-			lbl.ZIndex = 96
-			lbl.Active = false
-			lbl.Parent = btn
-
-			local function setHover(hovered)
-				if hovered then
-					TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						BackgroundTransparency = 0,
-						BackgroundColor3 = SelectedTheme.ElementStroke
-					}):Play()
-					TweenService:Create(bStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						Transparency = 0.3,
-						Color = SelectedTheme.TextColor
-					}):Play()
-					TweenService:Create(icon, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						ImageTransparency = 0,
-						ImageColor3 = SelectedTheme.SelectedTabTextColor or Color3.fromRGB(255, 255, 255)
-					}):Play()
-					TweenService:Create(lbl, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						TextColor3 = SelectedTheme.SelectedTabTextColor or Color3.fromRGB(255, 255, 255)
-					}):Play()
-				else
-					TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						BackgroundTransparency = 1
-					}):Play()
-					TweenService:Create(bStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						Transparency = 1
-					}):Play()
-					TweenService:Create(icon, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						ImageTransparency = 0.15,
-						ImageColor3 = SelectedTheme.TextColor
-					}):Play()
-					TweenService:Create(lbl, TweenInfo.new(0.12, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-						TextColor3 = SelectedTheme.TextColor
-					}):Play()
-				end
-			end
-
-			btn.MouseEnter:Connect(function() setHover(true) end)
-			btn.MouseLeave:Connect(function() setHover(false) end)
-			btn.SelectionGained:Connect(function() setHover(true) end)
-			btn.SelectionLost:Connect(function() setHover(false) end)
-			btn.InputBegan:Connect(function(inp)
-				if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
-					setHover(true)
-				end
-			end)
-			btn.InputEnded:Connect(function(inp)
-				if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
-					setHover(false)
-				end
-			end)
-
-			local function handleAction()
-				closeContextMenu()
-				task.spawn(opt.Callback)
-			end
-			btn.Activated:Connect(handleAction)
-			btn.MouseButton1Click:Connect(handleAction)
-		end
-
-		local mainPos = Main.AbsolutePosition
-		local mainSize = Main.AbsoluteSize
-		local mousePos = UserInputService:GetMouseLocation()
-
-		local targetX = mousePos.X - mainPos.X
-		local targetY = mousePos.Y - mainPos.Y
-
-		if triggerBtn then
-			local btnPos = triggerBtn.AbsolutePosition
-			local btnSize = triggerBtn.AbsoluteSize
-			if targetX < (btnPos.X - mainPos.X - 50) or targetX > (btnPos.X - mainPos.X + btnSize.X + 50) then
-				targetX = btnPos.X - mainPos.X - menuWidth - 4
-				targetY = btnPos.Y - mainPos.Y
-			end
-		end
-
-		local posX = math.clamp(targetX, 10, math.max(10, mainSize.X - menuWidth - 10))
-		local posY = math.clamp(targetY, 10, math.max(10, mainSize.Y - totalHeight - 10))
-
-		contextMenu.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
-		if cmStroke then
-			cmStroke.Color = SelectedTheme.SecondaryElementStroke or SelectedTheme.ElementStroke
-		end
-
-		contextMenu.Position = UDim2.new(0, posX, 0, posY)
-		contextMenu.Size = UDim2.new(0, menuWidth, 0, totalHeight)
-		contextMenu.BackgroundTransparency = 1
-		cmStroke.Transparency = 1
-		cmScale.Scale = 0.88
-		contextMenu.Visible = true
-		contextOverlay.Visible = true
-
-		TweenService:Create(contextMenu, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			BackgroundTransparency = 0.02
-		}):Play()
-		TweenService:Create(cmStroke, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Transparency = 0
-		}):Play()
-		TweenService:Create(cmScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1
-		}):Play()
-	end
-
-	listFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-		closeContextMenu()
-	end)
-
-	local wheelConn = UserInputService.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseWheel and contextMenu.Visible then
-			closeContextMenu()
-		end
-	end)
-	table.insert(allLibraryConnections, wheelConn)
-
-	refreshList = function()
-		refreshFileListGlobal = refreshList
-		closeContextMenu()
-	    for _, child in ipairs(listFrame:GetChildren()) do
-	        if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
-	            child:Destroy()
-	        end
-	    end
-
-	    if currentPath == "" then
-	        backBar.Visible = false
-	        listFrame.Position = UDim2.new(0.5, 0, 0, 50)
-	        listFrame.Size = UDim2.new(1, -10, 1, -54)
-	    else
-	        backBar.Visible = true
-	        curDirLabel.Text = currentPath
-	        listFrame.Position = UDim2.new(0.5, 0, 0, 78)
-	        listFrame.Size = UDim2.new(1, -10, 1, -82)
-	    end
-
-	    local rawList = {}
-	    local listErr = nil
-	    pcall(function()
-	        local listFunc = listfiles or (getgenv and getgenv().listfiles) or (syn and syn.listfiles) or (fluxus and fluxus.listfiles)
-	        if type(listFunc) == "function" then
-	            local ok, res
-	            if currentPath == "" then
-	                ok, res = pcall(listFunc, "")
-	                if not ok or type(res) ~= "table" then
-	                    ok, res = pcall(listFunc)
-	                end
-	                if not ok or type(res) ~= "table" then
-	                    ok, res = pcall(listFunc, ".")
-	                end
-	            else
-	                ok, res = pcall(listFunc, currentPath)
-	            end
-	            if ok and type(res) == "table" then
-	                rawList = res
-	            elseif not ok then
-	                listErr = tostring(res)
-	            end
-	        else
-	            listErr = "Filesystem not supported by executor"
-	        end
-	    end)
-
-	    local folders = {}
-	    local files = {}
-
-	    for _, p in ipairs(rawList) do
-	        local name = cleanFileName(p)
-	        local isDir = false
-	        local isfolderFunc = isfolder or (getgenv and getgenv().isfolder) or (syn and syn.isfolder)
-	        local isfileFunc = isfile or (getgenv and getgenv().isfile) or (syn and syn.isfile)
-	        pcall(function()
-	            if type(isfolderFunc) == "function" then
-	                isDir = isfolderFunc(p) == true
-	            end
-	        end)
-	        if not isDir and type(isfileFunc) == "function" then
-	            pcall(function()
-	                if isfileFunc(p) == false and getExtension(name) == "" then
-	                    isDir = true
-	                end
-	            end)
-	        end
-
-	        local size = 0
-	        if not isDir then
-	            table.insert(files, {Path = p, Name = name, IsFolder = false, Size = size, Ext = getExtension(name)})
-	        else
-	            table.insert(folders, {Path = p, Name = name, IsFolder = true, Size = 0, Ext = "DIR"})
-	        end
-	    end
-
-	    table.sort(folders, function(a, b) return string.lower(a.Name) < string.lower(b.Name) end)
-	    table.sort(files, function(a, b) return string.lower(a.Name) < string.lower(b.Name) end)
-
-	    local currentItems = {}
-	    for _, f in ipairs(folders) do table.insert(currentItems, f) end
-	    for _, f in ipairs(files) do table.insert(currentItems, f) end
-
-	    local filterText = string.lower(searchInput.Text)
-
-	    if #currentItems == 0 then
-	        local emptyLabel = Instance.new("TextLabel")
-	        emptyLabel.Name = "EmptyStatus"
-	        emptyLabel.Size = UDim2.new(1, -20, 0, 40)
-	        emptyLabel.Position = UDim2.new(0.5, 0, 0, 15)
-	        emptyLabel.AnchorPoint = Vector2.new(0.5, 0)
-	        emptyLabel.BackgroundTransparency = 1
-	        emptyLabel.Font = getUIFont()
-	        emptyLabel.TextSize = 12
-	        emptyLabel.TextColor3 = SelectedTheme.TextColor
-	        emptyLabel.TextTransparency = 0.4
-	        emptyLabel.TextXAlignment = Enum.TextXAlignment.Center
-	        if listErr then
-	            emptyLabel.Text = "Filesystem: " .. tostring(listErr)
-	        else
-	            if filterText ~= "" then
-	                emptyLabel.Text = "No matching files"
-	            elseif currentPath ~= "" then
-	                emptyLabel.Text = "Folder is empty"
-	            else
-	                emptyLabel.Text = "No files in workspace"
-	            end
-	        end
-	        emptyLabel.Parent = listFrame
-	    end
-
-	    for i, item in ipairs(currentItems) do
-	        local matches = (filterText == "" or string.find(string.lower(item.Name), filterText, 1, true))
-	        if matches then
-	            local row = Instance.new("Frame")
-	            row.Name = item.Name
-	            row.Size = UDim2.new(1, -4, 0, 34)
-	            row.BackgroundColor3 = (selectedItem and selectedItem.Path == item.Path) and SelectedTheme.DropdownSelected or SelectedTheme.ElementBackground
-	            row.BackgroundTransparency = (selectedItem and selectedItem.Path == item.Path) and 0.2 or 0.65
-	            row.BorderSizePixel = 0
-	            row.LayoutOrder = i
-	            row.Parent = listFrame
-
-	            local rCorner = Instance.new("UICorner", row); rCorner.CornerRadius = UDim.new(0, 6)
-
-	            local iconImg = Instance.new("ImageLabel")
-	            iconImg.Size = UDim2.new(0, 18, 0, 18)
-	            iconImg.Position = UDim2.new(0, 10, 0.5, 0)
-	            iconImg.AnchorPoint = Vector2.new(0, 0.5)
-	            iconImg.BackgroundTransparency = 1
-	            iconImg.ZIndex = 3
-	            if item.IsFolder then
-	                iconImg.Image = (folderAsset and folderAsset ~= "") and folderAsset or "rbxassetid://6034287525"
-	            else
-	                iconImg.Image = (fileAsset and fileAsset ~= "") and fileAsset or "rbxassetid://6034287527"
-	            end
-	            iconImg.ImageColor3 = SelectedTheme.TextColor
-	            iconImg.Parent = row
-
-	            local nameLbl = Instance.new("TextLabel")
-	            nameLbl.Text = item.Name
-	            nameLbl.Font = getUIFont()
-	            nameLbl.TextSize = 12
-	            nameLbl.TextColor3 = SelectedTheme.TextColor
-	            nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-	            nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
-	            nameLbl.Position = UDim2.new(0, 36, 0, 0)
-	            nameLbl.Size = UDim2.new(1, -125, 1, 0)
-	            nameLbl.BackgroundTransparency = 1
-	            nameLbl.ZIndex = 3
-	            nameLbl.Parent = row
-
-	            local sizeLbl = Instance.new("TextLabel")
-	            sizeLbl.Text = item.IsFolder and "" or formatSize(item.Size)
-	            sizeLbl.Font = getUIFont()
-	            sizeLbl.TextSize = 11
-	            sizeLbl.TextColor3 = SelectedTheme.TextColor
-	            sizeLbl.TextTransparency = 0.5
-	            sizeLbl.TextXAlignment = Enum.TextXAlignment.Right
-	            sizeLbl.Position = UDim2.new(1, -85, 0, 0)
-	            sizeLbl.Size = UDim2.new(0, 50, 1, 0)
-	            sizeLbl.BackgroundTransparency = 1
-	            sizeLbl.ZIndex = 3
-	            sizeLbl.Parent = row
-
-	            local menuBtn = Instance.new("TextButton")
-	            menuBtn.Name = "MenuBtn"
-	            menuBtn.Size = UDim2.new(0, 26, 0, 26)
-	            menuBtn.Position = UDim2.new(1, -18, 0.5, 0)
-	            menuBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-	            menuBtn.BackgroundColor3 = SelectedTheme.ElementBackgroundHover
-	            menuBtn.BackgroundTransparency = 1
-	            menuBtn.Text = ""
-	            menuBtn.AutoButtonColor = false
-	            menuBtn.ZIndex = 5
-	            menuBtn.Parent = row
-	            local mbCorner = Instance.new("UICorner", menuBtn); mbCorner.CornerRadius = UDim.new(0, 6)
-	            local mbStroke = Instance.new("UIStroke", menuBtn); mbStroke.Color = SelectedTheme.ElementStroke; mbStroke.Thickness = 1; mbStroke.Transparency = 1
-
-	            local dotsContainer = Instance.new("Frame", menuBtn)
-	            dotsContainer.Name = "Dots"
-	            dotsContainer.Size = UDim2.new(0, 14, 0, 4)
-	            dotsContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
-	            dotsContainer.AnchorPoint = Vector2.new(0.5, 0.5)
-	            dotsContainer.BackgroundTransparency = 1
-	            dotsContainer.Active = false
-
-	            local dots = {}
-	            for dotIdx = 0, 2 do
-	                local dot = Instance.new("Frame", dotsContainer)
-	                dot.Name = "Dot" .. (dotIdx + 1)
-	                dot.Size = UDim2.new(0, 3, 0, 3)
-	                dot.Position = UDim2.new(0, dotIdx * 5, 0.5, 0)
-	                dot.AnchorPoint = Vector2.new(0, 0.5)
-	                dot.BackgroundColor3 = SelectedTheme.TextColor
-	                dot.BackgroundTransparency = 0.3
-	                dot.BorderSizePixel = 0
-	                local dc = Instance.new("UICorner", dot)
-	                dc.CornerRadius = UDim.new(1, 0)
-	                table.insert(dots, dot)
-	            end
-
-	            menuBtn.MouseEnter:Connect(function()
-	                TweenService:Create(menuBtn, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-	                    BackgroundTransparency = 0.3
-	                }):Play()
-	                TweenService:Create(mbStroke, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-	                    Transparency = 0.5
-	                }):Play()
-	                for _, d in ipairs(dots) do
-	                    TweenService:Create(d, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-	                        BackgroundTransparency = 0
-	                    }):Play()
-	                end
-	            end)
-	            menuBtn.MouseLeave:Connect(function()
-	                TweenService:Create(menuBtn, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-	                    BackgroundTransparency = 1
-	                }):Play()
-	                TweenService:Create(mbStroke, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-	                    Transparency = 1
-	                }):Play()
-	                for _, d in ipairs(dots) do
-	                    TweenService:Create(d, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-	                        BackgroundTransparency = 0.3
-	                    }):Play()
-	                end
-	            end)
-
-	            local isScript = not item.IsFolder and (item.Ext == "LUA" or item.Ext == "LUAU" or item.Ext == "TXT" or item.Ext == "IY" or item.Ext == "")
-	            local canRunScript = isScript and capabilities.Loadstring and capabilities.FileSystem
-	            local runBtn = nil
-	            if canRunScript then
-	                runBtn = Instance.new("TextButton")
-	                runBtn.Name = "RunBtn"
-	                runBtn.Size = UDim2.new(0, 44, 0, 22)
-	                runBtn.Position = UDim2.new(1, -44, 0.5, 0)
-	                runBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-	                runBtn.BackgroundColor3 = SelectedTheme.ElementBackgroundHover or Color3.fromRGB(45, 45, 55)
-	                runBtn.Text = "Run"
-	                runBtn.TextColor3 = SelectedTheme.TextColor
-	                runBtn.TextSize = 11
-	                runBtn.Font = getUIFont()
-	                runBtn.AutoButtonColor = true
-	                runBtn.ZIndex = 5
-	                runBtn.Parent = row
-	                local rbCorner = Instance.new("UICorner", runBtn); rbCorner.CornerRadius = UDim.new(0, 5)
-	                local rbStroke = Instance.new("UIStroke", runBtn); rbStroke.Color = SelectedTheme.ElementStroke; rbStroke.Thickness = 1
-	                
-	                local function doRun()
-	                    pcall(function()
-	                        local src = readfile(item.Path)
-	                        loadstring(src)()
-	                    end)
-	                    runBtn.Text = "Done"
-	                    runBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60)
-	                    task.delay(0.8, function()
-	                        if runBtn and runBtn.Parent then
-	                            runBtn.Text = "Run"
-	                            runBtn.BackgroundColor3 = SelectedTheme.ElementBackgroundHover or Color3.fromRGB(45, 45, 55)
-	                        end
-	                    end)
-	                end
-	                runBtn.MouseButton1Click:Connect(doRun)
-	                runBtn.Activated:Connect(doRun)
-	            end
-
-	            local function openMenu()
-	                openContextMenu(item, menuBtn)
-	            end
-	            menuBtn.MouseButton1Click:Connect(openMenu)
-	            menuBtn.Activated:Connect(openMenu)
-
-	            local rowBtn = Instance.new("TextButton")
-	            rowBtn.Name = "RowClickArea"
-	            rowBtn.Size = canRunScript and UDim2.new(1, -72, 1, 0) or UDim2.new(1, -36, 1, 0)
-	            rowBtn.Position = UDim2.new(0, 0, 0, 0)
-	            rowBtn.BackgroundTransparency = 1
-	            rowBtn.Text = ""
-	            rowBtn.ZIndex = 2
-	            rowBtn.Parent = row
-
-	            row.MouseEnter:Connect(function()
-	                if not (selectedItem and selectedItem.Path == item.Path) then
-	                    TweenService:Create(row, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.45}):Play()
-	                end
-	            end)
-	            row.MouseLeave:Connect(function()
-	                if not (selectedItem and selectedItem.Path == item.Path) then
-	                    TweenService:Create(row, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.65}):Play()
-	                end
-	            end)
-
-	            local function onRowClicked()
-	                closeContextMenu()
-	                if item.IsFolder then
-	                    local targetPath = string.gsub(item.Path or item.Name, "\\", "/")
-	                    targetPath = string.gsub(targetPath, "^[./\\]+", "")
-	                    currentPath = targetPath
-	                    refreshList()
-	                else
-	                    selectedItem = item
-	                    for _, r in ipairs(listFrame:GetChildren()) do
-	                        if r:IsA("Frame") then
-	                            if r.Name == item.Name then
-	                                r.BackgroundColor3 = SelectedTheme.DropdownSelected
-	                                r.BackgroundTransparency = 0.2
-	                            else
-	                                r.BackgroundColor3 = SelectedTheme.ElementBackground
-	                                r.BackgroundTransparency = 0.65
-	                            end
-	                        end
-	                    end
-	                end
-	            end
-	            rowBtn.Activated:Connect(onRowClicked)
-	            rowBtn.MouseButton1Click:Connect(onRowClicked)
-
-	            rowBtn.MouseButton2Click:Connect(function()
-	                openContextMenu(item, rowBtn)
-	            end)
-	        end
-	    end
-	end
-
-	local backDebounce = false
-	local function goBack()
-	    if backDebounce then return end
-	    backDebounce = true
-	    task.delay(0.2, function() backDebounce = false end)
-	    closeContextMenu()
-	    currentPath = string.gsub(currentPath, "[/\\]?[^/\\]+$", "")
-	    currentPath = string.gsub(currentPath, "^[./\\]+", "")
-	    refreshList()
-	end
-	backBtn.Activated:Connect(goBack)
-	backBtn.MouseButton1Click:Connect(goBack)
-	backBtn.MouseEnter:Connect(function()
-	    TweenService:Create(backBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundColor3 = SelectedTheme.ElementBackgroundHover}):Play()
-	end)
-	backBtn.MouseLeave:Connect(function()
-	    TweenService:Create(backBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-	end)
-
-	searchInput:GetPropertyChangedSignal("Text"):Connect(function()
-	    closeContextMenu()
-	    refreshList()
-	end)
-
-	local previousTab = nil
-
-	toggleWorkspacePageGlobal = function() toggleWorkspacePage() end
-	local filesBtnDebounce = false
-	local function toggleWorkspacePage()
-	    if filesBtnDebounce then return end
-	    filesBtnDebounce = true
-	    task.delay(0.25, function() filesBtnDebounce = false end)
-	    closeContextMenu()
-	    local layout = Elements:FindFirstChildOfClass("UIPageLayout")
-	    if not layout then return end
-
-	    if layout.CurrentPage == workspacePage then
-	        if previousTab and previousTab.Parent == Elements then
-	            layout:JumpTo(previousTab)
-	            for _, tb in ipairs(TabList:GetChildren()) do
-	                if tb.Name == previousTab.Name then
-	                    TweenService:Create(tb, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
-	                    TweenService:Create(tb.Title, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-	                    TweenService:Create(tb.Image, TweenInfo.new(0.3), {ImageTransparency = 0}):Play()
-	                end
-	            end
-	        end
-	    else
-	        previousTab = layout.CurrentPage
-	        for _, tb in ipairs(TabList:GetChildren()) do
-	            if tb.Name ~= "Template" and tb:IsA("Frame") and tb.Name ~= "Placeholder" then
-	                TweenService:Create(tb, TweenInfo.new(0.3), {BackgroundTransparency = 0.7}):Play()
-	                TweenService:Create(tb.Title, TweenInfo.new(0.3), {TextTransparency = 0.2}):Play()
-	                TweenService:Create(tb.Image, TweenInfo.new(0.3), {ImageTransparency = 0.2}):Play()
-	            end
-	        end
-	        layout:JumpTo(workspacePage)
-	        refreshList()
-	    end
-	end
-	filesBtn.MouseButton1Click:Connect(toggleWorkspacePage)
-	filesBtn.Activated:Connect(toggleWorkspacePage)
-
-		updateFileExplorerTheme = function()
-			if not workspacePage or not workspacePage.Parent then return end
-			local anim = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-
-			if searchContainer then
-				TweenService:Create(searchContainer, anim, {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-				if scStroke then
-					TweenService:Create(scStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
-				end
-				if searchInput then
-					searchInput.TextColor3 = SelectedTheme.TextColor
-					searchInput.PlaceholderColor3 = SelectedTheme.PlaceholderColor or Color3.fromRGB(140, 140, 150)
-				end
-			end
-
-			if backBar then
-				if backBtn then
-					TweenService:Create(backBtn, anim, {BackgroundColor3 = SelectedTheme.ElementBackground}):Play()
-					if bbStroke then
-						TweenService:Create(bbStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
-					end
-					if bbIcon then
-						bbIcon.ImageColor3 = SelectedTheme.TextColor
-					end
-					if bbLbl then
-						bbLbl.TextColor3 = SelectedTheme.TextColor
-					end
-				end
-				if curDirLabel then
-					TweenService:Create(curDirLabel, anim, {BackgroundColor3 = SelectedTheme.ElementBackground, TextColor3 = SelectedTheme.TextColor}):Play()
-					if cdStroke then
-						TweenService:Create(cdStroke, anim, {Color = SelectedTheme.ElementStroke}):Play()
-					end
-				end
-			end
-
-			if listFrame then
-				listFrame.ScrollBarImageColor3 = SelectedTheme.ElementStroke
-				for _, row in ipairs(listFrame:GetChildren()) do
-					if row:IsA("Frame") then
-						local isSel = (selectedItem and selectedItem.Path == row.Name)
-						TweenService:Create(row, anim, {
-							BackgroundColor3 = isSel and SelectedTheme.DropdownSelected or SelectedTheme.ElementBackground
-						}):Play()
-						for _, txt in ipairs(row:GetDescendants()) do
-							if txt:IsA("TextLabel") and txt.Name ~= "Size" then
-								txt.TextColor3 = SelectedTheme.TextColor
-							end
-						end
-						local dots = row:FindFirstChild("MenuBtn") and row.MenuBtn:FindFirstChild("Dots")
-						if dots then
-							for _, d in ipairs(dots:GetChildren()) do
-								if d:IsA("Frame") then
-									d.BackgroundColor3 = SelectedTheme.TextColor
-								end
-							end
-						end
-					end
-				end
-			end
-
-			if contextMenu then
-				contextMenu.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
-				if cmStroke then
-					cmStroke.Color = SelectedTheme.SecondaryElementStroke or SelectedTheme.ElementStroke
-				end
-				for _, btn in ipairs(contextMenu:GetChildren()) do
-					if btn:IsA("TextButton") then
-						local lbl = btn:FindFirstChildOfClass("TextLabel")
-						if lbl then lbl.TextColor3 = SelectedTheme.TextColor end
-						local icon = btn:FindFirstChildOfClass("ImageLabel")
-						if icon then icon.ImageColor3 = SelectedTheme.TextColor end
-					end
-				end
-			end
-
-			if filesBtn then
-				local layout = Elements:FindFirstChildOfClass("UIPageLayout")
-				if layout and layout.CurrentPage == workspacePage then
-					filesBtn.ImageColor3 = SelectedTheme.TabBackgroundSelected
-				else
-					filesBtn.ImageColor3 = SelectedTheme.TextColor
-				end
-			end
-		end
-
-		if updateFileExplorerTheme then
-			updateFileExplorerTheme()
-		end
-	end
+	Topbar.Search.Position = UDim2.new(1, -105, 0.5, 0)
 
 	local hideBtnDebounce = false
 	local function toggleHide()
 		if Debounce or hideBtnDebounce then return end
 		hideBtnDebounce = true
-		task.delay(0.2, function() hideBtnDebounce = false end)
-		setVisibility(not Hidden, not useMobileSizing)
+		task.delay(0.3, function() hideBtnDebounce = false end)
+		if Hidden then
+			Hidden = false
+			Unhide()
+		else
+			Hidden = true
+			Hide(false)
+		end
 	end
 	Topbar.Hide.MouseButton1Click:Connect(toggleHide)
-	Topbar.Hide.Activated:Connect(toggleHide)
 
 hideHotkeyConnection = UserInputService.InputBegan:Connect(function(input, processed)
 	local hotkeyName = getSetting("General", "rayfieldOpen")
@@ -7123,15 +6078,7 @@ hideHotkeyConnection = UserInputService.InputBegan:Connect(function(input, proce
 	end
 end)
 
-if MPrompt then
-	MPrompt.Interact.MouseButton1Click:Connect(function()
-		if Debounce then return end
-		if Hidden then
-			Hidden = false
-			Unhide()
-		end
-	end)
-end
+
 
 for _, TopbarButton in ipairs(Topbar:GetChildren()) do
 	if TopbarButton.ClassName == "ImageButton" and TopbarButton.Name ~= 'Icon' then
