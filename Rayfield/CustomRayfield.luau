@@ -26,20 +26,23 @@ pcall(function()
 	CoreGui = getService("CoreGui")
 end)
 
+local protectGuiFunc = (syn and syn.protect_gui) or protectgui or protect_gui
 local function safeParentGui(gui)
+	if gui and typeof(gui) == "Instance" then
+		pcall(function()
+			gui.AutoLocalize = false
+			gui.Archivable = false
+		end)
+		if type(protectGuiFunc) == "function" then
+			pcall(protectGuiFunc, gui)
+		end
+	end
 	if gethui then
 		local ok, hui = pcall(gethui)
 		if ok and hui and typeof(hui) == "Instance" then
 			local parentOk = pcall(function() gui.Parent = hui end)
 			if parentOk then return hui end
 		end
-	end
-	if syn and syn.protect_gui and CoreGui then
-		local ok = pcall(function()
-			syn.protect_gui(gui)
-			gui.Parent = CoreGui
-		end)
-		if ok then return CoreGui end
 	end
 	if CoreGui then
 		local ok = pcall(function()
@@ -91,14 +94,28 @@ local function safeCleanOldGui(guiName, currentGui)
 		for _, container in ipairs(containers) do
 			pcall(function()
 				for _, item in ipairs(container:GetChildren()) do
-					if (item.Name == guiName or item.Name == guiName .. "-Old") and item ~= currentGui then
-						item.Enabled = false
-						pcall(function() item:Destroy() end)
+					if item:IsA("ScreenGui") and item ~= currentGui then
+						local matchesId = item:GetAttribute("_rf_win_id") == guiName
+						local matchesName = (item.Name == guiName or item.Name == guiName .. "-Old" or item.Name == "Rayfield_" .. guiName)
+						if matchesId or matchesName then
+							item.Enabled = false
+							pcall(function() item:Destroy() end)
+						end
 					end
 				end
 			end)
 		end
 	end)
+end
+
+local function generateStealthName(prefix)
+	local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	local res = (prefix or "UI") .. "_"
+	for i = 1, 14 do
+		local r = math.random(1, #chars)
+		res = res .. string.sub(chars, r, r)
+	end
+	return res
 end
 
 local function safeFont(fontName)
@@ -329,29 +346,7 @@ loadSettings()
 if debugX then
 end
 
-local ANALYTICS_TOKEN = "05de7f9fd320d3b8428cd1c77014a337b85b6c8efee2c5914f5ab5700c354b9a"
-
-local reporter = nil
-if not requestsDisabled and not useStudio then
-	local fetchSuccess, fetchResult = pcall((game :: any).HttpGet, game, "https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/refs/heads/main/reporter.lua")
-	if fetchSuccess and #fetchResult > 0 then
-		local execSuccess, Analytics = pcall(function()
-			return (loadstring(fetchResult) :: any)()
-		end)
-		if execSuccess and Analytics then
-			pcall(function()
-				reporter = Analytics.new({
-					url          = "https://rayfield-collect.sirius-software-ltd.workers.dev",
-					token        = ANALYTICS_TOKEN,
-					product_name = "Rayfield",
-					category     = "UILibrary",
-				})
-			end)
-		end
-	end
-end
-
--- Telemetry heartbeat removed
+-- External telemetry removed for privacy
 
 local promptUser = 2
 
@@ -1665,6 +1660,50 @@ local SelectedTheme = RayfieldLibrary.Theme.Default
 local currentUIFont = Enum.Font.Gotham
 local refreshFileListGlobal = nil
 local updateFileExplorerTheme: (() -> ())? = nil
+local toggleWorkspacePageGlobal: (() -> ())? = nil
+
+local function unloadWindow()
+	rayfieldDestroyed = true
+	if hideHotkeyConnection then
+		pcall(function() hideHotkeyConnection:Disconnect() end)
+	end
+	for _, connection in ipairs(keybindConnections) do
+		pcall(function() connection:Disconnect() end)
+	end
+	for _, connection in ipairs(allLibraryConnections) do
+		pcall(function() connection:Disconnect() end)
+	end
+	if Rayfield then
+		pcall(function() Rayfield:Destroy() end)
+	end
+end
+
+local function unloadAll()
+	unloadWindow()
+	pcall(function()
+		local containers = {}
+		if gethui then
+			local ok, h = pcall(gethui)
+			if ok and h then table.insert(containers, h) end
+		end
+		if CoreGui then
+			table.insert(containers, CoreGui)
+			local robloxGui = CoreGui:FindFirstChild("RobloxGui")
+			if robloxGui then table.insert(containers, robloxGui) end
+		end
+		local player = Players.LocalPlayer
+		if player and player:FindFirstChild("PlayerGui") then
+			table.insert(containers, player.PlayerGui)
+		end
+		for _, cont in ipairs(containers) do
+			for _, child in ipairs(cont:GetChildren()) do
+				if child:IsA("ScreenGui") and (string.find(child.Name, "Rayfield", 1, true) or child:FindFirstChild("Main")) then
+					pcall(function() child:Destroy() end)
+				end
+			end
+		end
+	end)
+end
 
 local currentActiveTabName: string? = nil
 local function ChangeTheme(Theme)
@@ -2584,6 +2623,34 @@ local function createSettings(window, winSettings)
 
 	local pickerSetters = {}
 
+	newTab:CreateSection("Script & UI Management")
+
+	newTab:CreateButton({
+		Name = "Unload",
+		Ext = true,
+		Callback = function()
+			unloadWindow()
+		end
+	})
+
+	newTab:CreateButton({
+		Name = "Unload All",
+		Ext = true,
+		Callback = function()
+			unloadAll()
+		end
+	})
+
+	newTab:CreateButton({
+		Name = "Exec Folder",
+		Ext = true,
+		Callback = function()
+			if toggleWorkspacePageGlobal then
+				toggleWorkspacePageGlobal()
+			end
+		end
+	})
+
 	newTab:CreateSection("Interface Scale & Dimensions")
 
 	scaleSlider = newTab:CreateSlider({
@@ -3123,10 +3190,18 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 	ensureFolder(RayfieldFolder)
 
-	local windowSafeName = "Rayfield_" .. (Settings.Name and string.gsub(Settings.Name, "[^%w_]+", "") or "Window")
+	local windowIdentifier = Settings.Name and string.gsub(Settings.Name, "[^%w_]+", "") or "Window"
+	local windowSafeName = Settings.ScreenGuiName or Settings.CustomGuiName or generateStealthName("UI")
 	Rayfield.Name = windowSafeName
+	pcall(function()
+		Rayfield.AutoLocalize = false
+		Rayfield.Archivable = false
+		Rayfield.ResetOnSpawn = false
+		Rayfield.DisplayOrder = 999999
+		Rayfield:SetAttribute("_rf_win_id", windowIdentifier)
+	end)
 	if Settings.DisableOld ~= false then
-		safeCleanOldGui(windowSafeName, Rayfield)
+		safeCleanOldGui(windowIdentifier, Rayfield)
 	end
 
 	local Passthrough = false
@@ -3363,7 +3438,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 				if ok and type(objs) == "table" and objs[1] then KeyUI = objs[1] end
 			end
 			if not KeyUI then
-				warn("Rayfield: Key UI asset could not be loaded, bypassing key system.")
+				
 				Passthrough = true
 			else
 			local keySafeName = "KeyUI_" .. (Settings.Name and string.gsub(Settings.Name, "[^%w_]+", "") or "Window")
@@ -5302,41 +5377,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 		createSettings(Window, Settings)
 	end)
 
-	if reporter and getSetting("System", "usageAnalytics") then
-		local themeName = "Default"
-		if Settings.Theme then
-			if type(Settings.Theme) == "string" then
-				themeName = Settings.Theme
-			elseif type(Settings.Theme) == "table" then
-				themeName = "Custom"
-			end
-		end
-
-		local discordInvite = nil
-		if Settings.Discord and Settings.Discord.Enabled and Settings.Discord.Invite and Settings.Discord.Invite ~= "" then
-			local raw = tostring(Settings.Discord.Invite)
-			discordInvite = (raw:match("discord%.gg/([%w%-]+)") or raw:match("discord%.com/invite/([%w%-]+)") or raw):sub(1, 32)
-		end
-
-		local sampleSend = false
-
-		if not Settings.ScriptID and math.random() > 0.4 then
-			sampleSend = true
-		end
-
-			reporter:windowCreated({
-				script_name        = Settings.Name or "Unknown",
-				script_version     = Release,
-				interface_version  = InterfaceBuild,
-				theme              = themeName,
-				is_mobile          = useMobileSizing and true or false,
-				has_key_system     = Settings.KeySystem and true or false,
-				discord_invite     = discordInvite,
-				config_saving      = (Settings.ConfigurationSaving and Settings.ConfigurationSaving.Enabled) and true or false,
-				script_id          = Settings.ScriptID or sampleSend and 'sid_tzfyxawonjx9' or nil,
-				verification_token = Settings.VerificationToken,
-			})
-	end
 
 	return Window
 end
@@ -5372,6 +5412,14 @@ function RayfieldLibrary:IsVisible(): boolean
 end
 
 local hideHotkeyConnection
+function RayfieldLibrary:Unload()
+	unloadWindow()
+end
+
+function RayfieldLibrary:UnloadAll()
+	unloadAll()
+end
+
 function RayfieldLibrary:Destroy()
 	rayfieldDestroyed = true
 	if hideHotkeyConnection then
@@ -5581,7 +5629,8 @@ end
 	local mobileToggle = Rayfield:FindFirstChild("RayfieldMobileToggle")
 	if not mobileToggle then
 		mobileToggle = Instance.new("ImageButton")
-		mobileToggle.Name = "RayfieldMobileToggle"
+		mobileToggle.Name = generateStealthName("MT")
+		pcall(function() mobileToggle.AutoLocalize = false mobileToggle.Archivable = false end)
 		mobileToggle.Size = UDim2.new(0, 50, 0, 50)
 		mobileToggle.Position = UDim2.new(0, 16, 0.5, -25)
 		mobileToggle.BackgroundColor3 = SelectedTheme.SecondaryElementBackground
@@ -6630,6 +6679,7 @@ end
 
 	local previousTab = nil
 
+	toggleWorkspacePageGlobal = function() toggleWorkspacePage() end
 	local filesBtnDebounce = false
 	local function toggleWorkspacePage()
 	    if filesBtnDebounce then return end
