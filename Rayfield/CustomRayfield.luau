@@ -1,4 +1,4 @@
-local RayfieldGen2 = (function()
+local RayfieldGen2 = (function() 
 local a local aa,ab,ac,ad,ae,af,ag,ah,ai,aj,ak,al,am,b,c,d,e,f,g,h,i={function()local b,c,d=a(1)local e return(function(
 ...)local f,g,h,i,j=d(c.utility.variables),d(c.utility.image),d(c.utility.locale),d(c.utility.constants),d(c.types)
 export type Theme=j.Theme export type Translator=j.Translator export type Translations=j.Translations export type
@@ -3212,63 +3212,33 @@ local function initSSafe(win: any)
 	end
 end
 
-local GlobalFlags = {}
 RayfieldGen2.Flags = setmetatable({}, {
 	__index = function(_, k)
-		local entry = GlobalFlags[k]
-		if entry then
-			local v = entry.getValue()
-			local keyStr = nil
-			if typeof(v) == "EnumItem" and v.EnumType == Enum.KeyCode then
-				keyStr = v.Name
-			elseif typeof(v) == "string" then
-				keyStr = v
-			end
-			local curOpt = if typeof(v) == "table" then v else { tostring(v) }
-			local flagObj = {
-				CurrentValue = v,
-				CurrentKeybind = keyStr or tostring(v),
-				CurrentOption = curOpt,
-				Color = if typeof(v) == "Color3" then v else Color3.new(1, 1, 1),
-				value = v,
-				Set = function(self, newVal)
-					if entry.setVal then return entry.setVal(newVal) end
-				end,
-				Refresh = function(self, opts, cur)
-					if entry.refresh then return entry.refresh(opts, cur) end
-				end,
-			}
-			return setmetatable(flagObj, {
-				__tostring = function() return tostring(v) end,
-				__eq = function(_, other) return v == other end,
-			})
-		end
 		if activeWindow and activeWindow.Flags then
 			local v = activeWindow.Flags[k]
 			if v ~= nil then
-				return setmetatable({ CurrentValue = v, value = v }, {
-					__tostring = function() return tostring(v) end,
+				return setmetatable({ CurrentValue = v }, {
+					__index = function(_, prop)
+						if prop == "CurrentValue" then
+							return v
+						end
+						return nil
+					end,
+					__tostring = function()
+						return tostring(v)
+					end,
 				})
 			end
 		end
 		return nil
 	end,
-	__newindex = function(_, k, v)
-		local entry = GlobalFlags[k]
-		if entry and entry.setVal then
-			entry.setVal(v)
-		elseif activeWindow and activeWindow.Flags then
-			activeWindow.Flags[k] = v
-		end
-	end,
 })
 
 function RayfieldGen2.Destroy(self)
-	if activeWindow and not activeWindow.unloaded then
+	if activeWindow and activeWindow.Unload then
 		activeWindow:Unload()
 	end
 end
-RayfieldGen2.Unload = RayfieldGen2.Destroy
 
 function RayfieldGen2.AddWatermark(self, props)
 	if activeWindow then
@@ -3285,7 +3255,7 @@ function RayfieldGen2.Notify(self, props)
 	if activeWindow and targetProps then
 		activeWindow:Notify({
 			title = targetProps.Title or targetProps.title or "Rayfield",
-			content = targetProps.Content or targetProps.content or targetProps.message or targetProps.text or "",
+			message = targetProps.Content or targetProps.content or targetProps.text or "",
 			duration = targetProps.Duration or targetProps.duration or 4,
 			icon = targetProps.Image or targetProps.icon,
 		})
@@ -3335,11 +3305,6 @@ function RayfieldGen2:CreateWindow(props)
 	activeWindow = window
 	table.insert(registeredWindows, window)
 
-	window.Destroy = window.Unload
-	window.ModifyTheme = window.ChangeTheme
-	window.Tabs = window.tabs
-	window.Elements = window.controls
-
 	local ssafeEnabled = props.SSafe == true or props.sSafe == true or normProps.SSafe == true
 	if ssafeEnabled then
 		local safeId = genIdentifier()
@@ -3383,7 +3348,6 @@ function RayfieldGen2:CreateWindow(props)
 		end
 		return origUnload(self)
 	end
-	window.Destroy = window.Unload
 
 	local origChangeTheme = window.ChangeTheme
 	function window:ChangeTheme(newTheme)
@@ -3631,20 +3595,6 @@ function RayfieldGen2:CreateWindow(props)
 		return frame
 	end
 
-	local origNotify = window.Notify
-	function window:Notify(nProps)
-		if typeof(nProps) == "table" then
-			local resolvedProps = {
-				title = nProps.Title or nProps.title or "Rayfield",
-				content = nProps.Content or nProps.content or nProps.message or nProps.text or "",
-				duration = nProps.Duration or nProps.duration or 4,
-				icon = nProps.Image or nProps.icon,
-			}
-			return origNotify(self, resolvedProps)
-		end
-		return origNotify(self, nProps)
-	end
-
 	if window.rfSettings then
 		window.rfSettings:CreateSection({ name = "Appearance" })
 
@@ -3737,50 +3687,25 @@ function RayfieldGen2:CreateWindow(props)
 			elseif typeof(secProps) == "table" then
 				secProps.name = secProps.name or secProps.Name or "Section"
 			end
-			local sec = origCreateSection(self, secProps)
-			if sec and not sec.Set then
-				function sec:Set(newTitle)
-					if self.SetName then self:SetName(tostring(newTitle)) end
-				end
-			end
-			return sec
+			return origCreateSection(self, secProps)
 		end
 
 		function tab:CreateLabel(lblProps)
 			local text = typeof(lblProps) == "string" and lblProps
 				or (typeof(lblProps) == "table" and (lblProps.Text or lblProps.text or lblProps.Name or lblProps.name))
 				or ""
-			local elem = self:CreateText({
+			return self:CreateText({
 				name = text,
 				text = "",
 			})
-			function elem:Set(newText)
-				local t = typeof(newText) == "table" and (newText.Text or newText.text or newText.Name or newText.name) or tostring(newText)
-				if self.SetName then self:SetName(t) end
-			end
-			elem.SetText = elem.Set
-			return elem
 		end
 
 		function tab:CreateParagraph(pProps)
-			local title = pProps.Title or pProps.title or pProps.Name or pProps.name or ""
-			local content = pProps.Content or pProps.content or pProps.Text or pProps.text or ""
-			local elem = self:CreateText({
-				name = title,
-				text = content,
+			return self:CreateText({
+				name = pProps.Title or pProps.title or pProps.Name or pProps.name or "",
+				text = pProps.Content or pProps.content or pProps.Text or pProps.text or "",
 				icon = pProps.Icon or pProps.icon,
 			})
-			function elem:Set(newProps)
-				if typeof(newProps) == "string" then
-					if self.SetText then self:SetText(newProps) end
-				elseif typeof(newProps) == "table" then
-					local nTitle = newProps.Title or newProps.title or newProps.Name or newProps.name
-					local nContent = newProps.Content or newProps.content or newProps.Text or newProps.text
-					if nTitle and self.SetName then self:SetName(nTitle) end
-					if nContent and self.SetText then self:SetText(nContent) end
-				end
-			end
-			return elem
 		end
 
 		local origCreateButton = tab.CreateButton
@@ -3801,30 +3726,7 @@ function RayfieldGen2:CreateWindow(props)
 					tProps.currentValue = tProps.CurrentValue
 				end
 				tProps.flag = tProps.flag or tProps.Flag
-				local userCb = tProps.callback or tProps.Callback or function() end
-				local curVal = if tProps.currentValue ~= nil then tProps.currentValue else false
-				local toggleInstance = nil
-				tProps.callback = function(val)
-					curVal = val
-					if toggleInstance then toggleInstance.CurrentValue = val end
-					userCb(val)
-				end
-				local toggle = origCreateToggle(self, tProps)
-				toggleInstance = toggle
-				toggle.CurrentValue = curVal
-				local origSet = toggle.Set
-				function toggle:Set(newVal)
-					curVal = newVal
-					self.CurrentValue = newVal
-					if origSet then return origSet(self, newVal) end
-				end
-				if tProps.flag then
-					GlobalFlags[tProps.flag] = {
-						getValue = function() return toggle.value or curVal end,
-						setVal = function(v) toggle:Set(v) end,
-					}
-				end
-				return toggle
+				tProps.callback = tProps.callback or tProps.Callback or function() end
 			end
 			return origCreateToggle(self, tProps)
 		end
@@ -3840,30 +3742,7 @@ function RayfieldGen2:CreateWindow(props)
 				end
 				sProps.suffix = sProps.suffix or sProps.Suffix or ""
 				sProps.flag = sProps.flag or sProps.Flag
-				local userCb = sProps.callback or sProps.Callback or function() end
-				local curVal = sProps.currentValue or sProps.range[1]
-				local sliderInstance = nil
-				sProps.callback = function(val)
-					curVal = val
-					if sliderInstance then sliderInstance.CurrentValue = val end
-					userCb(val)
-				end
-				local slider = origCreateSlider(self, sProps)
-				sliderInstance = slider
-				slider.CurrentValue = curVal
-				local origSet = slider.Set
-				function slider:Set(newVal)
-					curVal = newVal
-					self.CurrentValue = newVal
-					if origSet then return origSet(self, newVal) end
-				end
-				if sProps.flag then
-					GlobalFlags[sProps.flag] = {
-						getValue = function() return slider.value or curVal end,
-						setVal = function(v) slider:Set(v) end,
-					}
-				end
-				return slider
+				sProps.callback = sProps.callback or sProps.Callback or function() end
 			end
 			return origCreateSlider(self, sProps)
 		end
@@ -3873,9 +3752,6 @@ function RayfieldGen2:CreateWindow(props)
 			if typeof(dProps) == "table" then
 				dProps.name = dProps.name or dProps.Name or "Dropdown"
 				dProps.options = dProps.options or dProps.Options or {}
-				local isMulti = dProps.multipleOptions == true or dProps.MultipleOptions == true or dProps.MultiSelection == true or dProps.multiSelection == true
-				dProps.multipleOptions = isMulti
-
 				local cur = dProps.currentOption or dProps.CurrentOption
 				if typeof(cur) == "string" then
 					dProps.currentOption = { cur }
@@ -3883,50 +3759,7 @@ function RayfieldGen2:CreateWindow(props)
 					dProps.currentOption = cur
 				end
 				dProps.flag = dProps.flag or dProps.Flag
-
-				local userCb = dProps.callback or dProps.Callback or function() end
-				local dropdownInstance = nil
-				dProps.callback = function(selected)
-					local ret = if isMulti then (typeof(selected) == "table" and selected or { selected }) else (typeof(selected) == "table" and selected[1] or selected)
-					if dropdownInstance then
-						dropdownInstance.CurrentOption = if typeof(selected) == "table" then selected else { tostring(selected) }
-						dropdownInstance.CurrentValue = ret
-					end
-					userCb(ret)
-				end
-
-				local dropdown = origCreateDropdown(self, dProps)
-				dropdownInstance = dropdown
-				dropdown.CurrentOption = dProps.currentOption or {}
-				dropdown.CurrentValue = if isMulti then dropdown.CurrentOption else dropdown.CurrentOption[1]
-
-				local origRefresh = dropdown.Refresh
-				function dropdown:Refresh(options, current)
-					local curOpt = current or (typeof(self.value) == "table" and self.value) or { tostring(self.value) }
-					if typeof(curOpt) == "string" then curOpt = { curOpt } end
-					self.CurrentOption = curOpt
-					self.CurrentValue = if isMulti then curOpt else curOpt[1]
-					if origRefresh then return origRefresh(self, options, curOpt) end
-				end
-				function dropdown:Set(option)
-					local opt = option
-					if typeof(opt) == "string" then opt = { opt } end
-					self.CurrentOption = opt
-					self.CurrentValue = if isMulti then opt else opt[1]
-					if self.Set then return self:Set(opt) end
-				end
-
-				if dProps.flag then
-					GlobalFlags[dProps.flag] = {
-						getValue = function()
-							local v = dropdown.value or dropdown.CurrentOption
-							return if isMulti then v else (typeof(v) == "table" and v[1] or v)
-						end,
-						setVal = function(v) dropdown:Set(v) end,
-						refresh = function(opts, cur) dropdown:Refresh(opts, cur) end,
-					}
-				end
-				return dropdown
+				dProps.callback = dProps.callback or dProps.Callback or function() end
 			end
 			return origCreateDropdown(self, dProps)
 		end
@@ -3937,30 +3770,7 @@ function RayfieldGen2:CreateWindow(props)
 				iProps.name = iProps.name or iProps.Name or "Input"
 				iProps.placeholder = iProps.placeholder or iProps.PlaceholderText or iProps.Placeholder or "Enter text..."
 				iProps.flag = iProps.flag or iProps.Flag
-				local userCb = iProps.callback or iProps.Callback or function() end
-				local curVal = ""
-				local inputInstance = nil
-				iProps.callback = function(val)
-					curVal = val
-					if inputInstance then inputInstance.CurrentValue = val end
-					userCb(val)
-				end
-				local input = origCreateInput(self, iProps)
-				inputInstance = input
-				input.CurrentValue = curVal
-				local origSet = input.Set
-				function input:Set(newVal)
-					curVal = tostring(newVal)
-					self.CurrentValue = curVal
-					if origSet then return origSet(self, curVal) end
-				end
-				if iProps.flag then
-					GlobalFlags[iProps.flag] = {
-						getValue = function() return input.value or curVal end,
-						setVal = function(v) input:Set(v) end,
-					}
-				end
-				return input
+				iProps.callback = iProps.callback or iProps.Callback or function() end
 			end
 			return origCreateInput(self, iProps)
 		end
@@ -3975,46 +3785,7 @@ function RayfieldGen2:CreateWindow(props)
 					if ok and res then kProps.value = res end
 				end
 				kProps.flag = kProps.flag or kProps.Flag
-				local userCb = kProps.callback or kProps.Callback or function() end
-				local curKey = if typeof(kb) == "string" then kb else (typeof(kb) == "EnumItem" and kb.Name or "None")
-				local kbInstance = nil
-				kProps.callback = function(keyItem)
-					local kName = if typeof(keyItem) == "EnumItem" then keyItem.Name else tostring(keyItem)
-					curKey = kName
-					if kbInstance then
-						kbInstance.CurrentKeybind = kName
-						kbInstance.CurrentValue = kName
-					end
-					userCb(kName)
-				end
-				local keybind = origCreateKeybind(self, kProps)
-				kbInstance = keybind
-				keybind.CurrentKeybind = curKey
-				keybind.CurrentValue = curKey
-				local origSet = keybind.Set
-				function keybind:Set(newKey)
-					local kc = newKey
-					if typeof(kc) == "string" then
-						curKey = kc
-						local ok, res = pcall(function() return (Enum.KeyCode::any)[kc] end)
-						if ok and res then kc = res end
-					elseif typeof(kc) == "EnumItem" then
-						curKey = kc.Name
-					end
-					self.CurrentKeybind = curKey
-					self.CurrentValue = curKey
-					if origSet then return origSet(self, kc) end
-				end
-				if kProps.flag then
-					GlobalFlags[kProps.flag] = {
-						getValue = function()
-							local val = keybind.value or curKey
-							return if typeof(val) == "EnumItem" then val.Name else tostring(val)
-						end,
-						setVal = function(v) keybind:Set(v) end,
-					}
-				end
-				return keybind
+				kProps.callback = kProps.callback or kProps.Callback or function() end
 			end
 			return origCreateKeybind(self, kProps)
 		end
@@ -4025,35 +3796,7 @@ function RayfieldGen2:CreateWindow(props)
 				cpProps.name = cpProps.name or cpProps.Name or "Color Picker"
 				cpProps.color = cpProps.color or cpProps.Color or Color3.fromRGB(255, 255, 255)
 				cpProps.flag = cpProps.flag or cpProps.Flag
-				local userCb = cpProps.callback or cpProps.Callback or function() end
-				local curCol = cpProps.color
-				local cpInstance = nil
-				cpProps.callback = function(col)
-					curCol = col
-					if cpInstance then
-						cpInstance.Color = col
-						cpInstance.CurrentValue = col
-					end
-					userCb(col)
-				end
-				local cp = origCreateColorPicker(self, cpProps)
-				cpInstance = cp
-				cp.Color = curCol
-				cp.CurrentValue = curCol
-				local origSet = cp.Set
-				function cp:Set(newCol)
-					curCol = newCol
-					self.Color = newCol
-					self.CurrentValue = newCol
-					if origSet then return origSet(self, newCol) end
-				end
-				if cpProps.flag then
-					GlobalFlags[cpProps.flag] = {
-						getValue = function() return cp.value or curCol end,
-						setVal = function(v) cp:Set(v) end,
-					}
-				end
-				return cp
+				cpProps.callback = cpProps.callback or cpProps.Callback or function() end
 			end
 			return origCreateColorPicker(self, cpProps)
 		end
