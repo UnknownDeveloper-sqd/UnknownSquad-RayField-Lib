@@ -3294,8 +3294,9 @@ function RayfieldGen2:CreateWindow(props)
 	-- Close button. Stock Rayfield only collapses the window into a small "Tap to show" pill,
 	-- which looks like the button does nothing. CloseMode: "Hide" (default, fully hidden, reopen
 	-- with the toggle key / mobile button / :Show()), "Pill" (stock behaviour), "Unload" (destroy).
-	local closeMode = string.lower(tostring(props.CloseMode or props.closeMode or "Hide"))
+	local closeMode = string.lower(tostring(props.CloseMode or props.closeMode or "Hide")) -- default: Hide
 	local origShow = window.Show
+	local classHide = window.Hide -- kept so the X works even if a script overrides window.Hide
 	function window:Show()
 		if self.main then self.main.Visible = true end
 		return origShow(self)
@@ -3308,6 +3309,7 @@ function RayfieldGen2:CreateWindow(props)
 				task.defer(function() window:Unload() end)
 				return
 			end
+			if not window.hidden then pcall(classHide, window) end
 			task.delay(0.5, function()
 				if window.unloaded or not window.hidden then return end
 				if window.collapsedInteract then window.collapsedInteract.Visible = false end
