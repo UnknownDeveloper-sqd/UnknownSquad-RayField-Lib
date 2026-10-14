@@ -3291,6 +3291,31 @@ function RayfieldGen2:CreateWindow(props)
 	window.Toggle = window.ToggleHide
 	window.Destroy = window.Unload
 
+	-- Close button. Stock Rayfield only collapses the window into a small "Tap to show" pill,
+	-- which looks like the button does nothing. CloseMode: "Hide" (default, fully hidden, reopen
+	-- with the toggle key / mobile button / :Show()), "Pill" (stock behaviour), "Unload" (destroy).
+	local closeMode = string.lower(tostring(props.CloseMode or props.closeMode or "Hide"))
+	local origShow = window.Show
+	function window:Show()
+		if self.main then self.main.Visible = true end
+		return origShow(self)
+	end
+	local closeFrame = window.actionContainer and window.actionContainer:FindFirstChild("Close")
+	local closeButton = closeFrame and closeFrame:FindFirstChildOfClass("TextButton")
+	if closeButton and closeMode ~= "pill" then
+		window:Connect(closeButton.MouseButton1Click, function()
+			if closeMode == "unload" then
+				task.defer(function() window:Unload() end)
+				return
+			end
+			task.delay(0.5, function()
+				if window.unloaded or not window.hidden then return end
+				if window.collapsedInteract then window.collapsedInteract.Visible = false end
+				if window.main then window.main.Visible = false end
+			end)
+		end)
+	end
+
 	local origChangeTheme = window.ChangeTheme
 	function window:ChangeTheme(newTheme)
 		local resolvedTheme = newTheme
