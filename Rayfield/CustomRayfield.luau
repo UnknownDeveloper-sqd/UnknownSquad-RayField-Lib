@@ -3310,7 +3310,15 @@ function RayfieldGen2:CreateWindow(props)
 				return
 			end
 			if not window.hidden then pcall(classHide, window) end
-			if closeMode ~= "invisible" then return end
+			if closeMode ~= "invisible" then
+				-- make sure the reopen pill is always shown in the default mode
+				task.delay(0.5, function()
+					if window.unloaded or not window.hidden then return end
+					if window.main then window.main.Visible = true end
+					if window.collapsedInteract then window.collapsedInteract.Visible = true end
+				end)
+				return
+			end
 			task.delay(0.5, function()
 				if window.unloaded or not window.hidden then return end
 				if window.collapsedInteract then window.collapsedInteract.Visible = false end
@@ -3767,6 +3775,23 @@ function RayfieldGen2:CreateWindow(props)
 		end
 
 		return tab
+	end
+
+	-- The collapsed pill and the mobile button call window:ToggleHide() / window:Hide() on the
+	-- instance. A script doing `Window.Hide = function() end` silently breaks reopening, so those
+	-- two are protected from being overwritten.
+	local class = getmetatable(window)
+	if class and class.__index then
+		setmetatable(window, {
+			__index = class.__index,
+			__newindex = function(t, k, v)
+				if k == "Hide" or k == "ToggleHide" then
+					warn("Rayfield: window." .. k .. " cannot be overridden (it drives the close button and reopen pill).")
+					return
+				end
+				rawset(t, k, v)
+			end,
+		})
 	end
 
 	return window
