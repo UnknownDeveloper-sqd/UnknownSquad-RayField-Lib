@@ -1730,7 +1730,7 @@ fileName=L.fileName or L.FileName,customFolder=L.customFolder or L.CustomFolder}
 __index=function(M,N)local O=L.controls[N]return O and O.value end,__newindex=function(M,N,O)local P=L.controls[N]if not
 P then ak.warn("Rayfield: no flag '"..tostring(N).."' to set")return end P:Set(O)end,__iter=function()local M return
 function()local N M,N=next(L.controls,M)if M then return M,N.value end return nil end end})L.settings={toggleKeybind=
-Enum.KeyCode.K,mouseOverride=true,keepOnScreen=true,welcomeToast=true,haptics=true,showProfile=true}L.screenGui=L:
+Enum.KeyCode.K,mouseOverride=false,keepOnScreen=true,welcomeToast=true,haptics=true,showProfile=true}L.screenGui=L:
 Create('ScreenGui',{Name=f.httpService:GenerateGUID(false),IgnoreGuiInset=true,ResetOnSpawn=false,Enabled=true,
 DisplayOrder=ai.displayOrder.window,ZIndexBehavior=Enum.ZIndexBehavior.Global,Parent=f.guiContainer})L.main=L:Create(
 'Frame',{BackgroundColor3=Color3.fromRGB(255,255,255),Name=L.name,ZIndex=1,AnchorPoint=Vector2.new(0.5,0.5),Position=
@@ -1887,13 +1887,7 @@ CurrentCamera if N then K=I:Connect(N:GetPropertyChangedSignal'ViewportSize',L)e
 GetPropertyChangedSignal'CurrentCamera',M)M()local N=0 I:Connect(f.runService.Heartbeat,function(O:number)N+=O if N<v
 then return end N=0 I:_applyWindowSize()end)end function h._bindKeybind(I)I:Connect(f.userInputService.InputBegan,
 function(J,K)if K or I._recordingKeybind then return end if J.KeyCode==I.settings.toggleKeybind or J.UserInputType==I.
-settings.toggleKeybind then I:ToggleHide()end end)end function h._bindMouseOverride(I)local J=f.userInputService
-local function K()return I.settings.mouseOverride and not I.hidden and not I.minimised end local function L()if not K()
-then return end if J:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)then return end if J.MouseBehavior~=Enum.
-MouseBehavior.Default then J.MouseBehavior=Enum.MouseBehavior.Default end if not J.MouseIconEnabled then J.
-MouseIconEnabled=true end end I:Connect(J:GetPropertyChangedSignal'MouseBehavior',L)I:Connect(J:GetPropertyChangedSignal
-'MouseIconEnabled',L)I:Connect(J.InputEnded,function(M)if M.UserInputType==Enum.UserInputType.MouseButton2 then L()end
-end)I._freeMouse=L end function h._bindTopbarDrag(I)local J,K,L,M=f.userInputService,false,Vector2.zero,Vector2.zero if
+settings.toggleKeybind then I:ToggleHide()end end)end function h._bindMouseOverride(I)I._freeMouse=function()end end function h._bindTopbarDrag(I)local J,K,L,M=f.userInputService,false,Vector2.zero,Vector2.zero if
 I.screenGui and I.screenGui.IgnoreGuiInset then M=f.guiService:GetGuiInset()end local function N()local O=J:
 GetMouseLocation()+L+M local P,Q=O.X,O.Y if I.settings and I.settings.keepOnScreen then local R,S,T=I.main.AbsoluteSize,
 I.screenGui.AbsoluteSize,8 local U,V=R.X/2,R.Y/2 P=math.clamp(P,U+T,math.max(U+T,S.X-U-T))Q=math.clamp(Q,V+T,math.max(V+
@@ -3021,195 +3015,7 @@ local function genIdentifier(): string
 	return "RAYFIELD-" .. table.concat(res)
 end
 
-local monitoredUrls: { [string]: boolean } = {}
-local monitoredClipboard: { [string]: boolean } = {}
-
-local function inspectUrl(win: any, url: string): boolean
-	if typeof(url) ~= "string" then return true end
-	if url:find("github%.com/UnknownDeveloper%-sqd")
-		or url:find("raw%.githubusercontent%.com")
-		or url:find("roblox%.com")
-		or url:find("rbxcdn%.com") then
-		return true
-	end
-	if monitoredUrls[url] ~= nil then
-		return monitoredUrls[url]
-	end
-
-	local isWebhook = url:find("discord%.com/api/webhooks") or url:find("webhook")
-	local promptTitle = isWebhook and "SSafe [CRITICAL ALERT]" or "SSafe Security Guard"
-	local promptSub = isWebhook and "Suspicious Webhook Detected!" or "External Request Detected"
-	local promptMsg = (isWebhook and "POTENTIAL LOGGER / DATA EXFILTRATION DETECTED!\n\n" or "")
-		.. 'The script is attempting to contact URL:\n"'
-		.. url
-		.. '"\n\nDisable this URL?'
-
-	local blocked = true
-	if win and win.Popup then
-		win:Popup({
-			title = promptTitle,
-			subtitle = promptSub,
-			content = promptMsg,
-			dismissable = false,
-			options = {
-				{
-					text = "Disable URL (Block)",
-					accent = true,
-					callback = function()
-						blocked = true
-						monitoredUrls[url] = false
-					end,
-				},
-				{
-					text = "Allow URL",
-					callback = function()
-						blocked = false
-						monitoredUrls[url] = true
-					end,
-				},
-			},
-		})
-	else
-		monitoredUrls[url] = false
-		return false
-	end
-
-	return not blocked
-end
-
-local function inspectClipboard(win: any, text: string): boolean
-	if typeof(text) ~= "string" or text == "" then return true end
-	if monitoredClipboard[text] ~= nil then return monitoredClipboard[text] end
-
-	local snippet = text:sub(1, 80)
-	if #text > 80 then snippet = snippet .. "..." end
-
-	local blocked = true
-	if win and win.Popup then
-		win:Popup({
-			title = "SSafe | Clipboard Guard",
-			subtitle = "Unauthorized Clipboard Access",
-			content = 'A script is attempting to write to your clipboard:\n"' .. snippet .. '"\n\nBlock this clipboard change?',
-			dismissable = false,
-			options = {
-				{
-					text = "Block (Recommended)",
-					accent = true,
-					callback = function()
-						blocked = true
-						monitoredClipboard[text] = false
-					end,
-				},
-				{
-					text = "Allow Copy",
-					callback = function()
-						blocked = false
-						monitoredClipboard[text] = true
-					end,
-				},
-			},
-		})
-	else
-		return false
-	end
-
-	return not blocked
-end
-
-local function inspectTeleport(win: any, placeId: any): boolean
-	local blocked = true
-	if win and win.Popup then
-		win:Popup({
-			title = "SSafe | Teleport Guard",
-			subtitle = "Forced Teleport Detected",
-			content = 'A script attempted to teleport you to Place ID: ' .. tostring(placeId) .. '\n\nBlock this teleport?',
-			dismissable = false,
-			options = {
-				{
-					text = "Block Teleport (Recommended)",
-					accent = true,
-					callback = function()
-						blocked = true
-					end,
-				},
-				{
-					text = "Allow Teleport",
-					callback = function()
-						blocked = false
-					end,
-				},
-			},
-		})
-	else
-		return false
-	end
-	return not blocked
-end
-
-local ssafeHooked = false
 local function initSSafe(win: any)
-	if ssafeHooked then return end
-	ssafeHooked = true
-
-	local env = (getgenv and getgenv()) or _G
-	local hookfn = hookfunction or (replaceclosure and function(f, h) return replaceclosure(f, h) end)
-
-	if hookfn and game and (game::any).HttpGet then
-		local origHttpGet
-		origHttpGet = hookfn((game::any).HttpGet, function(self, url, ...)
-			if not inspectUrl(win, url) then
-				return ""
-			end
-			return origHttpGet(self, url, ...)
-		end)
-	end
-
-	for _, reqName in { "request", "http_request", "syn.request" } do
-		local origReq = env[reqName]
-		if typeof(origReq) == "function" and hookfn then
-			hookfn(origReq, function(reqTable)
-				local url = typeof(reqTable) == "table" and (reqTable.Url or reqTable.url)
-				if url and not inspectUrl(win, url) then
-					return { StatusCode = 403, StatusMessage = "Blocked by SSafe", Body = "", Headers = {} }
-				end
-				return origReq(reqTable)
-			end)
-		end
-	end
-
-	for _, cbName in { "setclipboard", "toclipboard" } do
-		local origCb = env[cbName]
-		if typeof(origCb) == "function" and hookfn then
-			hookfn(origCb, function(text)
-				if not inspectClipboard(win, tostring(text)) then
-					return
-				end
-				return origCb(text)
-			end)
-		end
-	end
-
-	local tpService = game:GetService("TeleportService")
-	if tpService and hookfn then
-		pcall(function()
-			local origTp
-			origTp = hookfn(tpService.Teleport, function(self, placeId, ...)
-				if not inspectTeleport(win, placeId) then
-					return
-				end
-				return origTp(self, placeId, ...)
-			end)
-		end)
-		pcall(function()
-			local origTpInstance
-			origTpInstance = hookfn(tpService.TeleportToPlaceInstance, function(self, placeId, ...)
-				if not inspectTeleport(win, placeId) then
-					return
-				end
-				return origTpInstance(self, placeId, ...)
-			end)
-		end)
-	end
 end
 
 RayfieldGen2.Flags = setmetatable({}, {
@@ -3305,14 +3111,10 @@ function RayfieldGen2:CreateWindow(props)
 	activeWindow = window
 	table.insert(registeredWindows, window)
 
-	local ssafeEnabled = props.SSafe == true or props.sSafe == true or normProps.SSafe == true
-	if ssafeEnabled then
+	if props and props.SSafe == true then
 		local safeId = genIdentifier()
 		if window.screenGui then window.screenGui.Name = safeId end
 		if window.main then window.main.Name = safeId end
-		task.spawn(function()
-			initSSafe(window)
-		end)
 	end
 
 	local origCollapsedRect = window._collapsedRect
