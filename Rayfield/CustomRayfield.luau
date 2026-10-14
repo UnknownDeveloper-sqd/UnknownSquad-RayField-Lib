@@ -735,9 +735,7 @@ utility local ag,ah,ai,b,c,d,e,f,g=ac(af.variables),ac(af.functions),ac(af.movea
 .constants),ac(af.HapticEngine),ac(af.enums),ac(af.log)local h,i,j=d.pillResizeInfo,TweenInfo.new(0.25,Enum.EasingStyle.
 Quint,Enum.EasingDirection.Out),{[Enum.UserInputType.MouseButton1]='MB1',[Enum.UserInputType.MouseButton2]='MB2',[Enum.
 UserInputType.MouseButton3]='MB3'}local function k(l)if typeof(l)~='EnumItem'or l==Enum.KeyCode.Unknown then return
-'None'end return j[l]or l.Name end local function l(m)if typeof(m)=='EnumItem'then return m end if type(m)=='string'then
-local n,o=pcall(function()return Enum.KeyCode[m]end)if n and o then return o end local p,q=pcall(function()return Enum.
-UserInputType[m]end)if p and q and j[q]then return q end end return Enum.KeyCode.Unknown end function ae.new(m,n)n=if
+'None'end return j[l]or l.Name end local function l(m)if typeof(m)=='EnumItem'then return m end if type(m)=='string'then if m=='MB1'then return Enum.UserInputType.MouseButton1 elseif m=='MB2'then return Enum.UserInputType.MouseButton2 elseif m=='MB3'then return Enum.UserInputType.MouseButton3 end local n,o=pcall(function()return(Enum.KeyCode::any)[m]end)if n and o then return o end local p,q=pcall(function()return(Enum.UserInputType::any)[m]end)if p and q then return q end end return Enum.KeyCode.Unknown end function ae.new(m,n)n=if
 typeof(n)=='table'then n else{}local o=setmetatable({tab=assert(m,'Missing argument #1 (Tab expected)'),window=m.window,
 name=n.name or n.Name or'Keybind',icon=n.icon or n.Icon,description=n.description or n.Description,forgetState=n.
 forgetState or n.ForgetState or m.forgetState,isMenuToggle=n.isMenuToggle or n.IsMenuToggle or false,callback=n.callback
@@ -1785,7 +1783,7 @@ Parent=L.topbar})L.actionsListLayout=L:Create('UIListLayout',{Padding=UDim.new(0
 Horizontal,VerticalAlignment=Enum.VerticalAlignment.Center,HorizontalAlignment=Enum.HorizontalAlignment.Right,SortOrder=
 Enum.SortOrder.LayoutOrder,Parent=L.actionContainer})L.rfSettings=L:CreateTab{name='Rayfield Settings',customOrder=1000,
 neglectSelector=true,forgetState=true}ac(ab.Parent.action).new(L,{name='Close',icon=ai.icons.close,order=1,callback=
-function()L:ToggleHide()end})L.minimiseAction=ac(ab.Parent.action).new(L,{name='Minimise',icon=ai.icons.minimise,order=2
+function()L:Unload()end})L.minimiseAction=ac(ab.Parent.action).new(L,{name='Minimise',icon=ai.icons.minimise,order=2
 ,callback=function()L:ToggleMinimise()end})L.settingsAction=ac(ab.Parent.action).new(L,{name='Settings',icon=ai.icons.
 settings,order=3,linkedTab=L.rfSettings,callback=function()L.rfSettings:Select()end})d.build(L)L:_applyRailWidth()L.
 unloaded=false L.minimised=false L.hidden=true L.animating=false L._revealing=false L.hasShownOnce=false L.
@@ -1923,7 +1921,7 @@ end end}N:CreateButton{name='Delete',callback=function()local O=J if not O or O=
 'Pick a configuration to delete'}return end if I:DeleteConfig(O)then M()I:Toast{title=aj.resolve'Deleted configuration',
 subtitle=O}else I:Toast{title=aj.resolve"Couldn't delete configuration",subtitle=O}end end}end end function h.SetProfile
 (I,J)I.profileText=J e.setSubtitle(I,J)end function h.SaveSettings(I)return ah.saveSettings(I)end function h.
-LoadSettings(I)return ah.loadSettings(I)end function h._roundCorners(I,J,K)if not K or not y then return I:Create(
+LoadSettings(I)if not(I.configuration and I.configuration.autoLoad)then return false end return ah.loadSettings(I)end function h._roundCorners(I,J,K)if not K or not y then return I:Create(
 'UICorner',{Parent=J},{CornerRadius='CornerRoundness'})end local L,M={Parent=J},{}for N,O in x do L[O]=UDim.new(0,0)end
 for N,O in K do L[O]=nil M[O]='CornerRoundness'end return I:Create('UICorner',L,M)end function h._setElementLocked(I,J,K
 ,L)K=K==true local M=J.locked==true if M==K and not(K and L)then return end J.locked=K if not J.lockScrim then I:
@@ -2613,7 +2611,7 @@ configuration:{fileName:string?,customFolder:string?},name:string}function ag.ge
 aj,af.sanitizeFolder(ah.configuration.customFolder))end if ai~=nil then local ak=af.sanitizeFile(ai)if ak==''then return
 nil,nil end return aj,af.join(aj,ak..'.rfld')end local ak=af.sanitizeFile(ah.configuration.fileName or ah.name)if ak==''
 then ak=af.sanitizeFile(ah.name)end if ak==''then ak='Configuration'end return aj,af.join(aj,ak..'.rfld')end function ag
-.getSettingsPath():(string,string)local ah=ae.fileSystemManager:getPath'Settings'return ah,af.join(ah,'rayfield.rfld')
+.getSettingsPath():(string,string)local ah=ae.fileSystemManager:getPath'Settings'return ah,af.join(ah,'rayfield_'..tostring(game.PlaceId or 0)..'.rfld')
 end return ag end)()end,[64]=function()local aa,ab,ac=a(64)local ad return(function(...)local ae,af,ag,ah,ai,aj=ac(ab.
 Parent.variables),ac(ab.Parent.filesystem),ac(ab.Parent.persistencePaths),ac(ab.Parent.persistenceWrite),ac(ab.Parent.
 enums),{}type SettingsWindow={settings:{toggleKeybind:EnumItem,mouseOverride:boolean,keepOnScreen:boolean,welcomeToast:
@@ -3008,24 +3006,93 @@ local function initSSafe(win: any)
 end
 
 RayfieldGen2.Flags = setmetatable({}, {
-	__index = function(_, k)
-		if activeWindow and activeWindow.Flags then
-			local v = activeWindow.Flags[k]
-			if v ~= nil then
-				return setmetatable({ CurrentValue = v }, {
-					__index = function(_, prop)
-						if prop == "CurrentValue" then
-							return v
+	__index = function(tbl, k)
+		if not activeWindow then return nil end
+		local ctrl = (activeWindow.controls and activeWindow.controls[k])
+		local v = (activeWindow.Flags and activeWindow.Flags[k])
+		if v == nil and ctrl then v = ctrl.value end
+		if v == nil and not ctrl then return nil end
+		local proxy = {}
+		return setmetatable(proxy, {
+			__index = function(_, prop)
+				local curVal = if ctrl then ctrl.value else (if activeWindow.Flags then activeWindow.Flags[k] else v)
+				if prop == "CurrentValue" or prop == "Value" or prop == "value" then
+					return curVal
+				elseif prop == "CurrentKeybind" or prop == "Keybind" or prop == "keybind" then
+					if typeof(curVal) == "EnumItem" then
+						return curVal.Name
+					elseif type(curVal) == "string" then
+						return curVal
+					end
+					return tostring(curVal or "")
+				elseif prop == "CurrentOption" or prop == "Option" or prop == "option" then
+					if type(curVal) == "table" then
+						return curVal
+					elseif curVal ~= nil then
+						return { tostring(curVal) }
+					end
+					return {}
+				elseif prop == "Color" or prop == "color" then
+					return curVal
+				elseif prop == "Set" or prop == "set" then
+					return function(_, newVal)
+						if ctrl and ctrl.Set then
+							pcall(function() ctrl:Set(newVal) end)
+						elseif activeWindow and activeWindow.Flags then
+							pcall(function() activeWindow.Flags[k] = newVal end)
 						end
-						return nil
-					end,
-					__tostring = function()
-						return tostring(v)
-					end,
-				})
+					end
+				elseif prop == "Refresh" or prop == "refresh" then
+					return function(_, newOpts)
+						if ctrl and ctrl.Refresh then
+							pcall(function() ctrl:Refresh(newOpts) end)
+						end
+					end
+				elseif ctrl and (ctrl::any)[prop] ~= nil then
+					return (ctrl::any)[prop]
+				end
+				return curVal
+			end,
+			__newindex = function(_, prop, newVal)
+				if prop == "CurrentValue" or prop == "Value" or prop == "value" or prop == "CurrentKeybind" or prop == "Color" then
+					if ctrl and ctrl.Set then
+						pcall(function() ctrl:Set(newVal) end)
+					elseif activeWindow and activeWindow.Flags then
+						pcall(function() activeWindow.Flags[k] = newVal end)
+					end
+				else
+					rawset(proxy, prop, newVal)
+				end
+			end,
+			__call = function(_, newVal)
+				if newVal ~= nil then
+					if ctrl and ctrl.Set then
+						pcall(function() ctrl:Set(newVal) end)
+					elseif activeWindow and activeWindow.Flags then
+						pcall(function() activeWindow.Flags[k] = newVal end)
+					end
+				end
+				return if ctrl then ctrl.value else (if activeWindow.Flags then activeWindow.Flags[k] else v)
+			end,
+			__tostring = function()
+				local curVal = if ctrl then ctrl.value else (if activeWindow.Flags then activeWindow.Flags[k] else v)
+				return tostring(curVal)
+			end,
+			__eq = function(_, other)
+				local curVal = if ctrl then ctrl.value else (if activeWindow.Flags then activeWindow.Flags[k] else v)
+				return curVal == other
+			end,
+		})
+	end,
+	__newindex = function(_, k, newVal)
+		if activeWindow then
+			local ctrl = activeWindow.controls and activeWindow.controls[k]
+			if ctrl and ctrl.Set then
+				pcall(function() ctrl:Set(newVal) end)
+			elseif activeWindow.Flags then
+				pcall(function() activeWindow.Flags[k] = newVal end)
 			end
 		end
-		return nil
 	end,
 })
 
@@ -3058,6 +3125,48 @@ function RayfieldGen2.Notify(self, props)
 end
 
 function RayfieldGen2:CreateWindow(props)
+	if typeof(getgenv) == "function" then
+		if getgenv()._RAYFIELD_ACTIVE_WINDOW then
+			pcall(function()
+				if getgenv()._RAYFIELD_ACTIVE_WINDOW.Unload then
+					getgenv()._RAYFIELD_ACTIVE_WINDOW:Unload()
+				end
+			end)
+			getgenv()._RAYFIELD_ACTIVE_WINDOW = nil
+		end
+		if type(getgenv()._RAYFIELD_WINDOWS) == "table" then
+			for _, oldWin in ipairs(getgenv()._RAYFIELD_WINDOWS) do
+				pcall(function()
+					if oldWin and oldWin.Unload and not oldWin.unloaded then
+						oldWin:Unload()
+					end
+				end)
+			end
+			table.clear(getgenv()._RAYFIELD_WINDOWS)
+		else
+			getgenv()._RAYFIELD_WINDOWS = {}
+		end
+	end
+	if activeWindow and activeWindow.Unload then
+		pcall(function() activeWindow:Unload() end)
+		activeWindow = nil
+	end
+	for _, w in ipairs(registeredWindows) do
+		if w and not w.unloaded and w.Unload then
+			pcall(function() w:Unload() end)
+		end
+	end
+	table.clear(registeredWindows)
+	local container = (typeof(gethui) == "function" and gethui()) or game:GetService("CoreGui")
+	if container then
+		pcall(function()
+			for _, child in ipairs(container:GetChildren()) do
+				if child:IsA("ScreenGui") and child:GetAttribute("IsRayfield") then
+					pcall(function() child:Destroy() end)
+				end
+			end
+		end)
+	end
 	props = props or {}
 	local normProps = {}
 	for k, v in pairs(props) do normProps[k] = v end
@@ -3100,6 +3209,16 @@ function RayfieldGen2:CreateWindow(props)
 	activeWindow = window
 	table.insert(registeredWindows, window)
 
+	if typeof(getgenv) == "function" then
+		getgenv()._RAYFIELD_ACTIVE_WINDOW = window
+		if type(getgenv()._RAYFIELD_WINDOWS) == "table" then
+			table.insert(getgenv()._RAYFIELD_WINDOWS, window)
+		end
+	end
+	if window.screenGui then
+		window.screenGui:SetAttribute("IsRayfield", true)
+	end
+
 	if props and props.SSafe == true then
 		local safeId = genIdentifier()
 		if window.screenGui then window.screenGui.Name = safeId end
@@ -3130,6 +3249,15 @@ function RayfieldGen2:CreateWindow(props)
 
 	local origUnload = window.Unload
 	function window:Unload()
+		if typeof(getgenv) == "function" then
+			if getgenv()._RAYFIELD_ACTIVE_WINDOW == self then
+				getgenv()._RAYFIELD_ACTIVE_WINDOW = nil
+			end
+			if type(getgenv()._RAYFIELD_WINDOWS) == "table" then
+				local pos = table.find(getgenv()._RAYFIELD_WINDOWS, self)
+				if pos then table.remove(getgenv()._RAYFIELD_WINDOWS, pos) end
+			end
+		end
 		local idx = table.find(registeredWindows, self)
 		if idx then
 			table.remove(registeredWindows, idx)
@@ -3142,6 +3270,8 @@ function RayfieldGen2:CreateWindow(props)
 		if self.screenGui then pcall(function() self.screenGui:Destroy() end) end
 		return origUnload(self)
 	end
+	window.Close = window.Unload
+	window.Destroy = window.Unload
 
 	local origChangeTheme = window.ChangeTheme
 	function window:ChangeTheme(newTheme)
@@ -3556,10 +3686,18 @@ function RayfieldGen2:CreateWindow(props)
 		function tab:CreateKeybind(kProps)
 			if typeof(kProps) == "table" then
 				kProps.name = kProps.name or kProps.Name or "Keybind"
-				local kb = kProps.currentKeybind or kProps.CurrentKeybind or kProps.value
+				local kb = kProps.currentKeybind or kProps.CurrentKeybind or kProps.value or kProps.default or kProps.Default
 				if typeof(kb) == "string" then
-					local ok, res = pcall(function() return (Enum.KeyCode::any)[kb] end)
-					if ok and res then kProps.value = res end
+					local ok, res = pcall(function()
+						if kb == "MB1" then return Enum.UserInputType.MouseButton1
+						elseif kb == "MB2" then return Enum.UserInputType.MouseButton2
+						elseif kb == "MB3" then return Enum.UserInputType.MouseButton3
+						end
+						return (Enum.KeyCode::any)[kb] or (Enum.UserInputType::any)[kb]
+					end)
+					if ok and res then kProps.value = res else kProps.value = kb end
+				elseif kb ~= nil then
+					kProps.value = kb
 				end
 				kProps.flag = kProps.flag or kProps.Flag
 				kProps.callback = kProps.callback or kProps.Callback or function() end
