@@ -3137,6 +3137,9 @@ function RayfieldGen2:CreateWindow(props)
 		if activeWindow == self then
 			activeWindow = registeredWindows[#registeredWindows]
 		end
+		if mobileButtonGui then pcall(function() mobileButtonGui:Destroy() end) mobileButtonGui = nil end
+		if activeWatermark then pcall(function() activeWatermark:Destroy() end) activeWatermark = nil end
+		if self.screenGui then pcall(function() self.screenGui:Destroy() end) end
 		return origUnload(self)
 	end
 
@@ -3439,26 +3442,7 @@ function RayfieldGen2:CreateWindow(props)
 		window.rfSettings:CreateButton({
 			name = "Unload Interface",
 			callback = function()
-				window:Popup({
-					title = "Unload Interface",
-					subtitle = "Confirm Action",
-					content = "Are you sure you want to unload and completely destroy this interface?",
-					options = {
-						{
-							text = "Yes, Unload",
-							accent = true,
-							callback = function()
-								if mobileButtonGui then pcall(function() mobileButtonGui:Destroy() end) end
-								if activeWatermark then pcall(function() activeWatermark:Destroy() end) end
-								window:Unload()
-							end,
-						},
-						{
-							text = "Cancel",
-							callback = function() end,
-						},
-					},
-				})
+				window:Unload()
 			end,
 		})
 	end
