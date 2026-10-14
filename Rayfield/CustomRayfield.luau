@@ -1783,7 +1783,7 @@ Parent=L.topbar})L.actionsListLayout=L:Create('UIListLayout',{Padding=UDim.new(0
 Horizontal,VerticalAlignment=Enum.VerticalAlignment.Center,HorizontalAlignment=Enum.HorizontalAlignment.Right,SortOrder=
 Enum.SortOrder.LayoutOrder,Parent=L.actionContainer})L.rfSettings=L:CreateTab{name='Rayfield Settings',customOrder=1000,
 neglectSelector=true,forgetState=true}ac(ab.Parent.action).new(L,{name='Close',icon=ai.icons.close,order=1,callback=
-function()L:Unload()end})L.minimiseAction=ac(ab.Parent.action).new(L,{name='Minimise',icon=ai.icons.minimise,order=2
+function()L:ToggleHide()end})L.minimiseAction=ac(ab.Parent.action).new(L,{name='Minimise',icon=ai.icons.minimise,order=2
 ,callback=function()L:ToggleMinimise()end})L.settingsAction=ac(ab.Parent.action).new(L,{name='Settings',icon=ai.icons.
 settings,order=3,linkedTab=L.rfSettings,callback=function()L.rfSettings:Select()end})d.build(L)L:_applyRailWidth()L.
 unloaded=false L.minimised=false L.hidden=true L.animating=false L._revealing=false L.hasShownOnce=false L.
@@ -3270,7 +3270,7 @@ function RayfieldGen2:CreateWindow(props)
 		if self.screenGui then pcall(function() self.screenGui:Destroy() end) end
 		return origUnload(self)
 	end
-	window.Close = window.Unload
+	window.Close = window.ToggleHide
 	window.Destroy = window.Unload
 
 	local origChangeTheme = window.ChangeTheme
