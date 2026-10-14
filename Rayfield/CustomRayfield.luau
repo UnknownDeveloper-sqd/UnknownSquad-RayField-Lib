@@ -2730,7 +2730,7 @@ end)()
 
 
 
-local function makeTheme(accent: Color3, baseBg: Color3?, accent2: Color3?, isLight: boolean?)
+local function makeThemeRaw(accent: Color3, baseBg: Color3?, accent2: Color3?, isLight: boolean?)
 	local a2 = accent2 or accent
 	local h, s, v = accent:ToHSV()
 	local bH, bS, bV = (baseBg or Color3.fromRGB(16, 16, 20)):ToHSV()
@@ -2818,6 +2818,39 @@ local function makeTheme(accent: Color3, baseBg: Color3?, accent2: Color3?, isLi
 			FieldTransparency = 0.9,
 		}
 	end
+end
+
+local WHITE = Color3.fromRGB(255, 255, 255)
+local function makeTheme(accent: Color3, baseBg: Color3?, accent2: Color3?, isLight: boolean?)
+	local t = makeThemeRaw(accent, baseBg, accent2, isLight)
+	-- Every key a theme can change is set explicitly, otherwise ChangeTheme keeps
+	-- stale values from the previous theme (e.g. dark text left over on a dark theme).
+	local defaults
+	if isLight then
+		defaults = {
+			TabColor = Color3.fromRGB(38, 42, 46), ActionColor = Color3.fromRGB(68, 74, 80),
+			SliderHandle = Color3.fromRGB(60, 66, 72), SliderStroke = Color3.fromRGB(200, 206, 210),
+			ElementTextHoverColor = Color3.fromRGB(18, 22, 26), FieldBackground = Color3.fromRGB(224, 230, 234),
+			FieldTransparency = 0, FieldGlow = Color3.fromRGB(148, 154, 160),
+			PlaceholderColor = Color3.fromRGB(138, 144, 150), SurfaceStroke = Color3.fromRGB(204, 210, 214),
+			ToggleTrack = Color3.fromRGB(198, 204, 210), ToggleTrackTransparency = 0,
+			ToggleKnobOffTransparency = 0.05, DarkToggleOverlay = false, AccentGlow = 0.85,
+			ElementStrokeTransparency = 0.1, ElementStrokeHoverTransparency = 0,
+		}
+	else
+		defaults = {
+			TabColor = WHITE, ActionColor = WHITE, SliderHandle = WHITE, SliderStroke = WHITE,
+			ElementTextHoverColor = WHITE, FieldBackground = WHITE, FieldTransparency = 0.9, FieldGlow = WHITE,
+			PlaceholderColor = Color3.fromRGB(178, 178, 178), SurfaceStroke = WHITE,
+			ToggleTrack = Color3.new(0, 0, 0), ToggleTrackTransparency = 0.9,
+			ToggleKnobOffTransparency = 0.8, DarkToggleOverlay = true, AccentGlow = 0.4,
+			ElementStrokeTransparency = 0, ElementStrokeHoverTransparency = 0,
+		}
+	end
+	for k, v in defaults do
+		if t[k] == nil then t[k] = v end
+	end
+	return t
 end
 
 local ExtraThemes = {}
@@ -2952,6 +2985,11 @@ for _, def in rawThemeDefs do
 	ExtraThemes[string.lower(tName)] = tData
 	table.insert(ThemeList, tName)
 end
+for _, builtin in { "Default", "Frost", "Ember", "Rose", "Cobalt" } do
+	if not ExtraThemes[string.lower(builtin)] then
+		table.insert(ThemeList, builtin)
+	end
+end
 table.sort(ThemeList)
 
 RayfieldGen2.Themes = ExtraThemes
@@ -2975,9 +3013,6 @@ local function genIdentifier(): string
 		table.insert(res, chars:sub(idx, idx))
 	end
 	return "RAYFIELD-" .. table.concat(res)
-end
-
-local function initSSafe(win: any)
 end
 
 RayfieldGen2.Flags = setmetatable({}, {
@@ -3092,7 +3127,7 @@ function RayfieldGen2.Notify(self, props)
 	if activeWindow and targetProps then
 		activeWindow:Notify({
 			title = targetProps.Title or targetProps.title or "Rayfield",
-			message = targetProps.Content or targetProps.content or targetProps.text or "",
+			content = targetProps.Content or targetProps.content or targetProps.text or "",
 			duration = targetProps.Duration or targetProps.duration or 4,
 			icon = targetProps.Image or targetProps.icon,
 		})
@@ -3176,7 +3211,8 @@ function RayfieldGen2:CreateWindow(props)
 		normProps.configuration = {
 			autoSave = true,
 			autoLoad = true,
-			fileName = props.ConfigurationSaving.FileName or props.ConfigurationSaving.FolderName or normProps.name,
+			fileName = props.ConfigurationSaving.FileName or normProps.name,
+			customFolder = props.ConfigurationSaving.FolderName,
 		}
 	end
 
@@ -3199,6 +3235,9 @@ function RayfieldGen2:CreateWindow(props)
 		if window.screenGui then window.screenGui.Name = safeId end
 		if window.main then window.main.Name = safeId end
 	end
+
+	local mobileButtonGui: any, activeWatermark: any = nil, nil
+	local uiConns: { RBXScriptConnection } = {}
 
 	local origCollapsedRect = window._collapsedRect
 	function window:_collapsedRect()
@@ -3224,6 +3263,9 @@ function RayfieldGen2:CreateWindow(props)
 
 	local origUnload = window.Unload
 	function window:Unload()
+		if self.unloaded then return end
+		for _, c in uiConns do pcall(function() c:Disconnect() end) end
+		table.clear(uiConns)
 		if typeof(getgenv) == "function" then
 			if getgenv()._RAYFIELD_ACTIVE_WINDOW == self then
 				getgenv()._RAYFIELD_ACTIVE_WINDOW = nil
@@ -3312,7 +3354,6 @@ function RayfieldGen2:CreateWindow(props)
 		end
 	end
 
-	local mobileButtonGui = nil
 	local function createMobileButton()
 		if mobileButtonGui then return mobileButtonGui end
 		local container = window.screenGui or (gethui and gethui()) or game:GetService("CoreGui")
@@ -3360,10 +3401,10 @@ function RayfieldGen2:CreateWindow(props)
 			end
 		end)
 
-		uis.InputChanged:Connect(function(input)
+		table.insert(uiConns, uis.InputChanged:Connect(function(input)
 			if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
 				local delta = Vector2.new(input.Position.X, input.Position.Y) - dragStart
-				totalMoved = totalMoved + delta.Magnitude
+				totalMoved = math.max(totalMoved, delta.Magnitude)
 				btn.Position = UDim2.new(
 					startPos.X.Scale,
 					startPos.X.Offset + delta.X,
@@ -3371,7 +3412,7 @@ function RayfieldGen2:CreateWindow(props)
 					startPos.Y.Offset + delta.Y
 				)
 			end
-		end)
+		end))
 
 		local function onEnded(input)
 			if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
@@ -3397,7 +3438,7 @@ function RayfieldGen2:CreateWindow(props)
 			end
 		end
 
-		uis.InputEnded:Connect(onEnded)
+		table.insert(uiConns, uis.InputEnded:Connect(onEnded))
 		btn.Parent = container
 		mobileButtonGui = btn
 		return btn
@@ -3416,7 +3457,6 @@ function RayfieldGen2:CreateWindow(props)
 		task.spawn(createMobileButton)
 	end
 
-	local activeWatermark = nil
 	function window:AddWatermark(wmProps)
 		wmProps = wmProps or {}
 		if activeWatermark then pcall(function() activeWatermark:Destroy() end) end
@@ -3464,14 +3504,14 @@ function RayfieldGen2:CreateWindow(props)
 		activeWatermark = frame
 
 		local fpsCount = 0
-		local lastFpsTime = tick()
+		local lastFpsTime = os.clock()
 		local currentFps = 60
 		local rs = game:GetService("RunService")
 		local statService = game:GetService("Stats")
 
 		local conn = rs.RenderStepped:Connect(function()
 			fpsCount = fpsCount + 1
-			local now = tick()
+			local now = os.clock()
 			if now - lastFpsTime >= 0.5 then
 				currentFps = math.round(fpsCount / (now - lastFpsTime))
 				fpsCount = 0
@@ -3501,6 +3541,12 @@ function RayfieldGen2:CreateWindow(props)
 		window.rfSettings:CreateSection({ name = "Appearance" })
 
 		local themeDropdown = nil
+		local currentThemeName = "Amethyst"
+		if typeof(themeVal) == "string" then
+			for _, n in ipairs(RayfieldGen2.ThemeList) do
+				if string.lower(n) == string.lower(themeVal) then currentThemeName = n break end
+			end
+		end
 		window.rfSettings:CreateInput({
 			name = "Search Theme",
 			placeholder = "Type to search 120+ themes...",
@@ -3516,7 +3562,7 @@ function RayfieldGen2:CreateWindow(props)
 					if #filtered == 0 then
 						filtered = { "No matches found" }
 					end
-					themeDropdown:Refresh(filtered, { filtered[1] })
+					themeDropdown:Refresh(filtered)
 				end
 			end,
 		})
@@ -3524,10 +3570,10 @@ function RayfieldGen2:CreateWindow(props)
 		themeDropdown = window.rfSettings:CreateDropdown({
 			name = "Theme Selector",
 			options = RayfieldGen2.ThemeList,
-			currentOption = { (typeof(normProps.theme) == "table" and normProps.theme.Name) or (typeof(props.Theme) == "string" and props.Theme) or "Amethyst" },
+			currentOption = { currentThemeName },
 			callback = function(opt)
-				local t = typeof(opt) == "table" and opt[1] or opt
-				if t ~= "No matches found" then
+				local t = if typeof(opt) == "table" then opt[1] else opt
+				if type(t) == "string" and t ~= "No matches found" then
 					window:ChangeTheme(t)
 				end
 			end,
@@ -3537,7 +3583,7 @@ function RayfieldGen2:CreateWindow(props)
 			window.rfSettings:CreateSection({ name = "Mobile" })
 			window.rfSettings:CreateToggle({
 				name = "Floating Mobile Button",
-				currentValue = shouldShowMobileBtn,
+				value = shouldShowMobileBtn,
 				callback = function(val)
 					window:SetMobileButtonVisible(val)
 				end,
@@ -3605,8 +3651,8 @@ function RayfieldGen2:CreateWindow(props)
 		function tab:CreateToggle(tProps)
 			if typeof(tProps) == "table" then
 				tProps.name = tProps.name or tProps.Name or "Toggle"
-				if tProps.currentValue == nil and tProps.CurrentValue ~= nil then
-					tProps.currentValue = tProps.CurrentValue
+				if tProps.value == nil and tProps.Value == nil then
+					tProps.value = if tProps.currentValue ~= nil then tProps.currentValue else tProps.CurrentValue
 				end
 				tProps.flag = tProps.flag or tProps.Flag
 				tProps.callback = tProps.callback or tProps.Callback or function() end
