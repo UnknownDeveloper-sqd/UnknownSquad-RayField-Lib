@@ -3308,33 +3308,145 @@ function RayfieldGen2:CreateWindow(props)
 		destroyReopenPill()
 		if window.unloaded or not window.screenGui then return end
 		local th = window.theme
+		local showIconOnly = window.showIconOnly
+		local tweenService = game:GetService("TweenService")
+		local userInputService = game:GetService("UserInputService")
+		local textService = game:GetService("TextService")
+		local titleText = tostring(window.showName or normProps.showName or "Rayfield")
+		local titleFont = Font.fromEnum(Enum.Font.GothamMedium)
+		local width = 185
+		if not showIconOnly then
+			local ok, bounds = pcall(function()
+				return textService:GetTextSize(titleText, 16, Enum.Font.GothamMedium, Vector2.new(1000, 16))
+			end)
+			if ok then width = math.max(185, math.floor(bounds.X) + 74) end
+		end
+		local size = if showIconOnly then UDim2.fromOffset(50, 50) else UDim2.fromOffset(width, 50)
 		local btn = Instance.new("TextButton")
 		btn.Name = "RayfieldReopen"
 		btn.AnchorPoint = Vector2.new(0.5, 0.5)
 		btn.Position = UDim2.new(0.5, 0, 0, 45)
-		btn.Size = UDim2.fromOffset(200, 34)
+		btn.Size = size
 		btn.AutoButtonColor = false
 		btn.BorderSizePixel = 0
-		btn.BackgroundColor3 = th.NeutralButton or Color3.fromRGB(38, 38, 38)
-		btn.TextColor3 = th.ContentColor or Color3.new(1, 1, 1)
-		btn.TextSize = 14
-		btn.TextTruncate = Enum.TextTruncate.AtEnd
-		btn.Text = tostring(normProps.name or "Rayfield") .. "  \u{2022}  Show"
+		btn.Text = ""
+		btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		btn.BackgroundTransparency = th.WindowTransparency or 0
 		btn.ZIndex = 10000
-		pcall(function() btn.FontFace = th.Font end)
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(1, 0)
 		corner.Parent = btn
+		local gradient = Instance.new("UIGradient")
+		gradient.Rotation = 270
+		pcall(function()
+			if typeof(th.WindowColor) == "ColorSequence" then
+				gradient.Color = th.WindowColor
+			elseif typeof(th.WindowColor) == "Color3" then
+				gradient.Color = ColorSequence.new(th.WindowColor)
+			end
+		end)
+		gradient.Parent = btn
 		local stroke = Instance.new("UIStroke")
-		stroke.Color = th.AccentStroke or Color3.fromRGB(160, 160, 160)
-		stroke.Transparency = 0.3
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Thickness = 1
+		stroke.Transparency = 0.5
+		stroke.Color = if typeof(th.SurfaceStroke) == "Color3" then th.SurfaceStroke else Color3.fromRGB(255, 255, 255)
 		stroke.Parent = btn
-		local pad = Instance.new("UIPadding")
-		pad.PaddingLeft = UDim.new(0, 12)
-		pad.PaddingRight = UDim.new(0, 12)
-		pad.Parent = btn
-		btn.MouseButton1Click:Connect(function()
+		pcall(function()
+			local shadow = Instance.new("UIShadow")
+			shadow.BlurRadius = UDim.new(0, 20)
+			shadow.Transparency = 0.6
+			shadow.ZIndex = -1
+			if typeof(th.ShadowColor) == "Color3" then shadow.Color = th.ShadowColor end
+			shadow.Parent = btn
+		end)
+		local titlingColor = if typeof(th.TitlingColor) == "Color3" then th.TitlingColor else Color3.fromRGB(255, 255, 255)
+		local icon = Instance.new("ImageLabel")
+		icon.Name = "CollapsedIcon"
+		icon.AnchorPoint = if showIconOnly then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5)
+		icon.Position = if showIconOnly then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 16, 0.5, 0)
+		icon.Size = UDim2.fromOffset(24, 24)
+		icon.BackgroundTransparency = 1
+		icon.Image = window.showIcon or ""
+		icon.ImageColor3 = titlingColor
+		icon.ZIndex = 10001
+		icon.Parent = btn
+		local iconCorner = Instance.new("UICorner")
+		iconCorner.CornerRadius = UDim.new(1, 0)
+		iconCorner.Parent = icon
+		if not showIconOnly then
+			local holder = Instance.new("Frame")
+			holder.Name = "CollapsedText"
+			holder.AnchorPoint = Vector2.new(0, 0.5)
+			holder.Position = UDim2.new(0, 50, 0.5, 0)
+			holder.Size = UDim2.new(1, -60, 0, 32)
+			holder.BackgroundTransparency = 1
+			holder.ZIndex = 10001
+			holder.Parent = btn
+			local layout = Instance.new("UIListLayout")
+			layout.Padding = UDim.new(0, 1)
+			layout.VerticalAlignment = Enum.VerticalAlignment.Center
+			layout.SortOrder = Enum.SortOrder.LayoutOrder
+			layout.Parent = holder
+			local title = Instance.new("TextLabel")
+			title.Name = "Title"
+			title.Text = titleText
+			title.Size = UDim2.new(1, 0, 0, 16)
+			title.BackgroundTransparency = 1
+			title.FontFace = titleFont
+			title.TextSize = 16
+			title.RichText = true
+			title.TextXAlignment = Enum.TextXAlignment.Left
+			title.TextTruncate = Enum.TextTruncate.AtEnd
+			title.TextColor3 = titlingColor
+			title.LayoutOrder = 1
+			title.ZIndex = 10001
+			title.Parent = holder
+			local subtitle = Instance.new("TextLabel")
+			subtitle.Name = "Subtitle"
+			subtitle.Text = "Tap to show"
+			subtitle.Size = UDim2.new(1, 0, 0, 14)
+			subtitle.BackgroundTransparency = 1
+			subtitle.FontFace = titleFont
+			subtitle.TextSize = 14
+			subtitle.TextXAlignment = Enum.TextXAlignment.Left
+			subtitle.TextColor3 = titlingColor
+			subtitle.TextTransparency = 0.5
+			subtitle.LayoutOrder = 2
+			subtitle.ZIndex = 10001
+			subtitle.Parent = holder
+		end
+		local pressed, dragged = false, false
+		local pressMouse, startPos = Vector2.zero, btn.Position
+		btn.InputBegan:Connect(function(input)
+			local t = input.UserInputType.Name
+			if t ~= "MouseButton1" and t ~= "Touch" then return end
+			pressed, dragged = true, false
+			pressMouse = userInputService:GetMouseLocation()
+			startPos = btn.Position
+		end)
+		btn.InputChanged:Connect(function(input)
+			if not pressed then return end
+			local t = input.UserInputType.Name
+			if t ~= "MouseMovement" and t ~= "Touch" then return end
+			local delta = userInputService:GetMouseLocation() - pressMouse
+			if not dragged and delta.Magnitude < 5 then return end
+			dragged = true
+			btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end)
+		btn.InputEnded:Connect(function(input)
+			local t = input.UserInputType.Name
+			if t ~= "MouseButton1" and t ~= "Touch" then return end
+			if not pressed then return end
+			pressed = false
+			if dragged then return end
 			if not window.unloaded then window:Show() end
+		end)
+		btn.MouseEnter:Connect(function()
+			tweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Quint), { Transparency = 0.2 }):Play()
+		end)
+		btn.MouseLeave:Connect(function()
+			tweenService:Create(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Quint), { Transparency = 0.5 }):Play()
 		end)
 		btn.Parent = window.screenGui
 		reopenPill = btn
