@@ -105,13 +105,10 @@ restoreContent,TextTransparency=1,Parent=p},{TextColor3='TitlingColor'})n.collap
 Medium),TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=2,ZIndex=i.zIndex.restoreContent,
 TextTransparency=1,Parent=p},{TextColor3='TitlingColor'})n.collapsedSubtitle.Active=false n.collapsedInteract=n:Create('TextButton',{Name=
 'CollapsedInteract',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),Text='',TextTransparency=1,Visible=false,Active=true,ZIndex=i
-.zIndex.restoreInteract,Parent=n.main})l.bindCollapsedDrag(n)end function l.bindCollapsedDrag(n)local o,p,q,r,s=g.
-userInputService,false,false,Vector2.zero,Vector2.zero local function t()if n.screenGui and n.screenGui.IgnoreGuiInset
-then return g.guiService:GetGuiInset()end return Vector2.zero end local function doOpen()if n.unloaded then return end n.animating=false n.hidden=true k.click()n:Show()end n:Connect(n.collapsedInteract.MouseButton1Click,function()if not q then doOpen()end end)n:Connect(n.collapsedInteract.Activated,function()if not q then doOpen()end end)n:Connect(n.collapsedInteract.InputBegan,function(u)if not n.hidden then return end local w=u.UserInputType.Name if w~='MouseButton1'and w~='Touch'then return end p,q=true,false s=o:GetMouseLocation()r=n.main.AbsolutePosition+n.main.AbsoluteSize*n.main.AnchorPoint-s end)n:Connect(o.InputEnded,function(u)local v=u.UserInputType.Name if v~='MouseButton1'and v~='Touch'then return end if not p then return end p=false if q then n._collapsedPosition=n.main.Position task.delay(0.05,function()q=false end)return end doOpen()end)n:Connect(o.WindowFocusReleased,function()p=false end)n:Connect(g.runService.RenderStepped,function()if not p then return end if not n.hidden then p=false return end local u=o:GetMouseLocation()if not q and(u-s).Magnitude<8 then return end q=true local v=u+r+t()n.main.Position=UDim2.fromOffset(v.X,v.Y)end)end function l.isNewUser()local n=g.
+.zIndex.restoreInteract,Parent=n.main})l.bindCollapsedDrag(n)end function l.bindCollapsedDrag(n)local o,p,q,r,s=g.userInputService,false,false,Vector2.zero,Vector2.zero n._lastDragEnd=0 local function t()if n.screenGui and n.screenGui.IgnoreGuiInset then return g.guiService:GetGuiInset()end return Vector2.zero end local function doOpen()if n.unloaded or not n.hidden then return end if q or(os.clock()-(n._lastDragEnd or 0)<0.35)then return end n.animating=false n.hidden=true k.click()n:Show()end n:Connect(n.collapsedInteract.MouseButton1Click,function()doOpen()end)n:Connect(n.collapsedInteract.Activated,function()doOpen()end)n:Connect(n.collapsedInteract.InputBegan,function(u)if not n.hidden then return end local w=u.UserInputType.Name if w~='MouseButton1'and w~='Touch'then return end p,q=true,false s=o:GetMouseLocation()r=n.main.AbsolutePosition+n.main.AbsoluteSize*n.main.AnchorPoint-s end)n:Connect(o.InputEnded,function(u)local v=u.UserInputType.Name if v~='MouseButton1'and v~='Touch'then return end if not p then return end p=false if q then n._collapsedPosition=n.main.Position n._lastDragEnd=os.clock()task.delay(0.35,function()q=false end)return end doOpen()end)n:Connect(o.WindowFocusReleased,function()p=false end)n:Connect(g.runService.RenderStepped,function()if not p then return end if not n.hidden then p=false return end local u=o:GetMouseLocation()if not q and(u-s).Magnitude<8 then return end q=true n._lastDragEnd=os.clock()local v=u+r+t()n.main.Position=UDim2.fromOffset(v.X,v.Y)end)end function l.isNewUser()local n=g.
 localPlayer if not n then return false end if typeof(h.isfile)~='function'or typeof(h.writefile)~='function'then return
 true end local o,p,q=g.fileSystemManager:getPath'lastuser.txt',tostring(n.UserId),true pcall(function()if h.isfile(o)
-then q=h.readfile(o)~=p end end)pcall(function()h.writefile(o,p)end)return q end function l.setCollapsedShown(n,o,p)
-local ic=n.showIcon or 80387863064905 if type(ic)=='number'or not string.find(tostring(ic),'://')then ic='rbxassetid://'..tostring(ic)end if n.collapsedIcon then n.collapsedIcon.Image=ic end if n.collapsedTitle then n.collapsedTitle.Text=n.showName or'UnknownSquad'end if n.collapsedSubtitle then n.collapsedSubtitle.Text='Tap to show'end local q={[n.collapsedIcon]={ImageTransparency=if o then 0 else 1}}if not n.showIconOnly then q[n.collapsedTitle]={
+then q=h.readfile(o)~=p end end)pcall(function()h.writefile(o,p)end)return q end function l.setCollapsedShown(n,o,p)if n.bottomFade then n.bottomFade.Visible=not o if o then n.bottomFade.BackgroundTransparency=1 end end if n.main then n.main.ClipsDescendants=o end local ic=n.showIcon or 80387863064905 if type(ic)=='number'or not string.find(tostring(ic),'://')then ic='rbxassetid://'..tostring(ic)end if n.collapsedIcon then n.collapsedIcon.Image=ic end if n.collapsedTitle then n.collapsedTitle.Text=n.showName or'UnknownSquad'end if n.collapsedSubtitle then n.collapsedSubtitle.Text='Tap to show'end local q={[n.collapsedIcon]={ImageTransparency=if o then 0 else 1}}if not n.showIconOnly then q[n.collapsedTitle]={
 TextTransparency=if o then 0 else 1}q[n.collapsedSubtitle]={TextTransparency=if o then 0.5 else 1}end for r,s in q do if
 p then g.tweenService:Create(r,p,s):Play()else for t,u in s do r[t]=u end end end end return l end)()end,[6]=function()
 local b,c,d=a(6)local e return(function(...)local f={}f.__index=f f.__type='ColorPicker'local g=c.Parent.Parent.utility
@@ -1908,10 +1905,7 @@ AutoButtonColor=false,Size=UDim2.fromScale(1,1),BorderSizePixel=0,Text='',TextTr
 elementLock,Visible=false,BackgroundTransparency=1,Parent=J.main},{BackgroundColor3={'WindowColor',C}})I:Create(
 'UICorner',{Parent=J.lockScrim},{CornerRadius='ElementCornerRadius'})end function h._setContentVisible(I,J)I.elements.
 Visible=J I.tabList.Visible=J if I.sidebar then I.sidebar.Visible=J end end function h._fadeSurfaces(I,J,K)local L={[I.
-windowShadow]={Transparency=if J then 0.6 else 1},[I.windowStroke]={Transparency=if J then 0.95 else 1},[I.bottomFade]={
-BackgroundTransparency=if J then 0 else 1}}if I.elementsStroke then L[I.elements]={BackgroundTransparency=if J then I.
-layout.cardTransparency else 1}L[I.elementsStroke]={Transparency=if J then 0 else 1}end for M,N in L do if K then f.
-tweenService:Create(M,K,N):Play()else for O,P in N do M[O]=P end end end e.setProfileShown(I,J,K)end function h.
+windowShadow]={Transparency=if J then 0.6 else 1},[I.windowStroke]={Transparency=if J then 0.95 else 1},[I.bottomFade]={BackgroundTransparency=if J then 0 else 1}}if not J and I.bottomFade then I.bottomFade.Visible=false end if J and I.bottomFade then I.bottomFade.Visible=true end if I.main then I.main.ClipsDescendants=not J end if I.elementsStroke then L[I.elements]={BackgroundTransparency=if J then I.layout.cardTransparency else 1}L[I.elementsStroke]={Transparency=if J then 0 else 1}end for M,N in L do if K then f.tweenService:Create(M,K,N):Play()else for O,P in N do M[O]=P end end end e.setProfileShown(I,J,K)end function h.
 _fadeSelectedElementsOut(I)if I.selectedTab then for J,K in ipairs(I.selectedTab.elements)do K:_setShown(false,true)end
 end end function h._revealElements(I,J,K)for L,M in pairs(I.tabs)do if M~=I.selectedTab then for N,O in ipairs(M.
 elements)do O:_setShown(true,false)end end end local L=I.selectedTab if not L then return end local M=L.tabPage local N=
@@ -3297,6 +3291,11 @@ function RayfieldGen2:CreateWindow(props)
 	local function ensureCollapsedFace()
 		if window.unloaded or not window.hidden then return end
 		if window.topbar then window.topbar.Visible = false end
+		if window.bottomFade then
+			window.bottomFade.Visible = false
+			window.bottomFade.BackgroundTransparency = 1
+		end
+		if window.main then window.main.ClipsDescendants = true end
 		if window.collapsedIcon then
 			local iconId = window.showIcon or "rbxassetid://80387863064905"
 			if type(iconId) == "number" or not string.find(tostring(iconId), "://") then
@@ -3341,32 +3340,32 @@ function RayfieldGen2:CreateWindow(props)
 	function window:Show()
 		self.animating = false
 		self.hidden = true
-		if self.main then self.main.Visible = true end
+		if self.main then
+			self.main.Visible = true
+			self.main.ClipsDescendants = false
+		end
 		if self.topbar then self.topbar.Visible = true end
+		if self.bottomFade then self.bottomFade.Visible = true end
 		local res = origShow(self)
 		if self.collapsedInteract then self.collapsedInteract.Visible = false end
 		task.delay(0.25, function()
 			if self.unloaded or self.hidden then return end
 			if self.topbar then self.topbar.Visible = true end
+			if self.bottomFade then self.bottomFade.Visible = true end
 			if self._setContentVisible then self:_setContentVisible(true) end
 		end)
 		return res
 	end
 	if window.collapsedInteract then
-		window.collapsedInteract.MouseButton1Click:Connect(function()
-			if not window.unloaded then
-				window.animating = false
-				window.hidden = true
-				window:Show()
-			end
-		end)
-		window.collapsedInteract.Activated:Connect(function()
-			if not window.unloaded then
-				window.animating = false
-				window.hidden = true
-				window:Show()
-			end
-		end)
+		local function safeOpen()
+			if window.unloaded or not window.hidden then return end
+			if window._lastDragEnd and (os.clock() - window._lastDragEnd < 0.35) then return end
+			window.animating = false
+			window.hidden = true
+			window:Show()
+		end
+		window.collapsedInteract.MouseButton1Click:Connect(safeOpen)
+		window.collapsedInteract.Activated:Connect(safeOpen)
 	end
 	local closeFrame = window.actionContainer and window.actionContainer:FindFirstChild("Close")
 	local closeButton = closeFrame and closeFrame:FindFirstChildOfClass("TextButton")
@@ -3404,7 +3403,7 @@ function RayfieldGen2:CreateWindow(props)
 					BackgroundTransparency = resolvedTheme.WindowTransparency
 				}):Play()
 			end
-			if self.bottomFade then
+			if self.bottomFade and not self.hidden then
 				game:GetService("TweenService"):Create(self.bottomFade, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 					BackgroundTransparency = math.clamp(resolvedTheme.WindowTransparency, 0, 1)
 				}):Play()
