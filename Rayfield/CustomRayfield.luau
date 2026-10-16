@@ -3226,13 +3226,13 @@ function RayfieldGen2:CreateWindow(props)
 			table.insert(getgenv()._RAYFIELD_WINDOWS, window)
 		end
 	end
-	if window.screenGui then
-		window.screenGui:SetAttribute("IsRayfield", true)
-	end
-
-	if props and props.SSafe == true then
+	-- SSafe is off unless the window is created with SSafe = true
+	if props.SSafe == true then
 		local safeId = genIdentifier()
-		if window.screenGui then window.screenGui.Name = safeId end
+		if window.screenGui then
+			window.screenGui.Name = safeId
+			window.screenGui:SetAttribute("IsRayfield", true)
+		end
 		if window.main then window.main.Name = safeId end
 	end
 
@@ -3295,9 +3295,54 @@ function RayfieldGen2:CreateWindow(props)
 	-- "Invisible" (fully hidden, reopen with the toggle key / mobile button / :Show()),
 	-- "Unload" (destroy the window).
 	local closeMode = string.lower(tostring(props.CloseMode or props.closeMode or "Hide"))
+	-- Library-owned reopen button. It is a plain TextButton parented to the window's ScreenGui,
+	-- so nothing in the stock collapse animation can remove it; only Show() or Unload() do.
+	local reopenPill: TextButton? = nil
+	local function destroyReopenPill()
+		if reopenPill then
+			pcall(function() reopenPill:Destroy() end)
+			reopenPill = nil
+		end
+	end
+	local function createReopenPill()
+		destroyReopenPill()
+		if window.unloaded or not window.screenGui then return end
+		local th = window.theme
+		local btn = Instance.new("TextButton")
+		btn.Name = "RayfieldReopen"
+		btn.AnchorPoint = Vector2.new(0.5, 0.5)
+		btn.Position = UDim2.new(0.5, 0, 0, 45)
+		btn.Size = UDim2.fromOffset(200, 34)
+		btn.AutoButtonColor = false
+		btn.BorderSizePixel = 0
+		btn.BackgroundColor3 = th.NeutralButton or Color3.fromRGB(38, 38, 38)
+		btn.TextColor3 = th.ContentColor or Color3.new(1, 1, 1)
+		btn.TextSize = 14
+		btn.TextTruncate = Enum.TextTruncate.AtEnd
+		btn.Text = tostring(normProps.name or "Rayfield") .. "  \u{2022}  Show"
+		btn.ZIndex = 10000
+		pcall(function() btn.FontFace = th.Font end)
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = btn
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = th.AccentStroke or Color3.fromRGB(160, 160, 160)
+		stroke.Transparency = 0.3
+		stroke.Parent = btn
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 12)
+		pad.PaddingRight = UDim.new(0, 12)
+		pad.Parent = btn
+		btn.MouseButton1Click:Connect(function()
+			if not window.unloaded then window:Show() end
+		end)
+		btn.Parent = window.screenGui
+		reopenPill = btn
+	end
 	local origShow = window.Show
 	local classHide = window.Hide -- kept so the X works even if a script overrides window.Hide
 	function window:Show()
+		destroyReopenPill()
 		if self.main then self.main.Visible = true end
 		return origShow(self)
 	end
@@ -3311,11 +3356,12 @@ function RayfieldGen2:CreateWindow(props)
 			end
 			if not window.hidden then pcall(classHide, window) end
 			if closeMode ~= "invisible" then
-				-- make sure the reopen pill is always shown in the default mode
 				task.delay(0.5, function()
 					if window.unloaded or not window.hidden then return end
-					if window.main then window.main.Visible = true end
-					if window.collapsedInteract then window.collapsedInteract.Visible = true end
+					-- swap the stock pill for the library-owned one so it can never disappear
+					if window.collapsedInteract then window.collapsedInteract.Visible = false end
+					if window.main then window.main.Visible = false end
+					createReopenPill()
 				end)
 				return
 			end
