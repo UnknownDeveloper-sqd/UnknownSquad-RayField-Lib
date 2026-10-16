@@ -93,28 +93,21 @@ local f=c.Parent.Parent.utility local g,h,i,j,k,l,m=d(f.variables),d(f.filesyste
 HapticEngine),{},5 function l.buildCollapsedFace(n)local o=n.showIconOnly local ic=n.showIcon or 80387863064905 if type(ic)=='number'or not string.find(tostring(ic),'://')then ic='rbxassetid://'..tostring(ic)end n.collapsedIcon=n:Create('ImageLabel',{Name=
 'CollapsedIcon',AnchorPoint=if o then Vector2.new(0.5,0.5)else Vector2.new(0,0.5),Position=if o then UDim2.fromScale(0.5
 ,0.5)else UDim2.new(0,16,0.5,0),Size=UDim2.fromOffset(24,24),BackgroundTransparency=1,Image=ic,ZIndex=i.zIndex.
-restoreContent,ImageTransparency=1,Parent=n.main},{ImageColor3='TitlingColor'})n:Create('UICorner',{Parent=n.
-collapsedIcon},{CornerRadius='PillCornerRadius'})local p=n:Create('Frame',{Name='CollapsedText',Visible=not o,
+restoreContent,ImageTransparency=1,Parent=n.main},{ImageColor3='TitlingColor'})n.collapsedIcon.Active=false n:Create('UICorner',{Parent=n.
+collapsedIcon},{CornerRadius='PillCornerRadius'})local p=n:Create('Frame',{Name='CollapsedText',Visible=not o,Active=false,
 AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,50,0.5,0),Size=UDim2.new(1,-60,0,32),BackgroundTransparency=1,ZIndex
 =i.zIndex.restoreContent,Parent=n.main})n:Create('UIListLayout',{Padding=UDim.new(0,1),VerticalAlignment=Enum.
 VerticalAlignment.Center,SortOrder=Enum.SortOrder.LayoutOrder,Parent=p})n.collapsedTitle=n:Create('TextLabel',{Name=
 'Title',Text=n.showName,Size=UDim2.new(1,0,0,16),BackgroundTransparency=1,FontFace=g.brandFont(Enum.FontWeight.Medium),
 RichText=true,TextSize=16,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=1,ZIndex=i.zIndex.
-restoreContent,TextTransparency=1,Parent=p},{TextColor3='TitlingColor'})n.collapsedSubtitle=n:Create('TextLabel',{Name=
-'Subtitle',Text=j.t'Tap to show',Size=UDim2.new(1,0,0,14),BackgroundTransparency=1,FontFace=g.brandFont(Enum.FontWeight.
+restoreContent,TextTransparency=1,Parent=p},{TextColor3='TitlingColor'})n.collapsedTitle.Active=false n.collapsedSubtitle=n:Create('TextLabel',{Name=
+'Subtitle',Text=j.t'Tap to show',Size=UDim2.new(1,0,0,14),Active=false,BackgroundTransparency=1,FontFace=g.brandFont(Enum.FontWeight.
 Medium),TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=2,ZIndex=i.zIndex.restoreContent,
-TextTransparency=1,Parent=p},{TextColor3='TitlingColor'})n.collapsedInteract=n:Create('TextButton',{Name=
-'CollapsedInteract',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),Text='',TextTransparency=1,Visible=false,ZIndex=i
+TextTransparency=1,Parent=p},{TextColor3='TitlingColor'})n.collapsedSubtitle.Active=false n.collapsedInteract=n:Create('TextButton',{Name=
+'CollapsedInteract',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),Text='',TextTransparency=1,Visible=false,Active=true,ZIndex=i
 .zIndex.restoreInteract,Parent=n.main})l.bindCollapsedDrag(n)end function l.bindCollapsedDrag(n)local o,p,q,r,s=g.
 userInputService,false,false,Vector2.zero,Vector2.zero local function t()if n.screenGui and n.screenGui.IgnoreGuiInset
-then return g.guiService:GetGuiInset()end return Vector2.zero end n:Connect(n.collapsedInteract.InputBegan,function(u,v)
-if v or not n.hidden or n.animating then return end local w=u.UserInputType.Name if w~='MouseButton1'and w~='Touch'then
-return end p,q=true,false s=o:GetMouseLocation()r=n.main.AbsolutePosition+n.main.AbsoluteSize*n.main.AnchorPoint-s end)n
-:Connect(o.InputEnded,function(u)local v=u.UserInputType.Name if v~='MouseButton1'and v~='Touch'then return end if not p
-then return end p=false if q then n._collapsedPosition=n.main.Position return end k.click()n:ToggleHide()end)n:Connect(o
-.WindowFocusReleased,function()p=false end)n:Connect(g.runService.RenderStepped,function()if not p then return end if
-not n.hidden or n.animating then p=false return end local u=o:GetMouseLocation()if not q and(u-s).Magnitude<m then
-return end q=true local v=u+r+t()n.main.Position=UDim2.fromOffset(v.X,v.Y)end)end function l.isNewUser()local n=g.
+then return g.guiService:GetGuiInset()end return Vector2.zero end local function doOpen()if n.unloaded then return end n.animating=false n.hidden=true k.click()n:Show()end n:Connect(n.collapsedInteract.MouseButton1Click,function()if not q then doOpen()end end)n:Connect(n.collapsedInteract.Activated,function()if not q then doOpen()end end)n:Connect(n.collapsedInteract.InputBegan,function(u)if not n.hidden then return end local w=u.UserInputType.Name if w~='MouseButton1'and w~='Touch'then return end p,q=true,false s=o:GetMouseLocation()r=n.main.AbsolutePosition+n.main.AbsoluteSize*n.main.AnchorPoint-s end)n:Connect(o.InputEnded,function(u)local v=u.UserInputType.Name if v~='MouseButton1'and v~='Touch'then return end if not p then return end p=false if q then n._collapsedPosition=n.main.Position task.delay(0.05,function()q=false end)return end doOpen()end)n:Connect(o.WindowFocusReleased,function()p=false end)n:Connect(g.runService.RenderStepped,function()if not p then return end if not n.hidden then p=false return end local u=o:GetMouseLocation()if not q and(u-s).Magnitude<8 then return end q=true local v=u+r+t()n.main.Position=UDim2.fromOffset(v.X,v.Y)end)end function l.isNewUser()local n=g.
 localPlayer if not n then return false end if typeof(h.isfile)~='function'or typeof(h.writefile)~='function'then return
 true end local o,p,q=g.fileSystemManager:getPath'lastuser.txt',tostring(n.UserId),true pcall(function()if h.isfile(o)
 then q=h.readfile(o)~=p end end)pcall(function()h.writefile(o,p)end)return q end function l.setCollapsedShown(n,o,p)
@@ -3346,8 +3339,34 @@ function RayfieldGen2:CreateWindow(props)
 	local origShow = window.Show
 	local classHide = protectedHide
 	function window:Show()
+		self.animating = false
+		self.hidden = true
 		if self.main then self.main.Visible = true end
-		return origShow(self)
+		if self.topbar then self.topbar.Visible = true end
+		local res = origShow(self)
+		if self.collapsedInteract then self.collapsedInteract.Visible = false end
+		task.delay(0.25, function()
+			if self.unloaded or self.hidden then return end
+			if self.topbar then self.topbar.Visible = true end
+			if self._setContentVisible then self:_setContentVisible(true) end
+		end)
+		return res
+	end
+	if window.collapsedInteract then
+		window.collapsedInteract.MouseButton1Click:Connect(function()
+			if not window.unloaded then
+				window.animating = false
+				window.hidden = true
+				window:Show()
+			end
+		end)
+		window.collapsedInteract.Activated:Connect(function()
+			if not window.unloaded then
+				window.animating = false
+				window.hidden = true
+				window:Show()
+			end
+		end)
 	end
 	local closeFrame = window.actionContainer and window.actionContainer:FindFirstChild("Close")
 	local closeButton = closeFrame and closeFrame:FindFirstChildOfClass("TextButton")
