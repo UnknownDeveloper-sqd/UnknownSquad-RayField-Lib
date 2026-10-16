@@ -90,9 +90,9 @@ ElementStrokeTransparency}):Play()end)end function f._setShown(n,o,p)if o then n
 _hideCommon(n,p)end end function f._minWidth(n)local o=32 if n.icon then o+=22 end o+=i.textWidth(n.window.theme.Font,16
 ,l.resolve(n.name))return o end j(f)k(f)return f end)()end,[5]=function()local b,c,d=a(5)local e return(function(...)
 local f=c.Parent.Parent.utility local g,h,i,j,k,l,m=d(f.variables),d(f.filesystem),d(f.constants),d(f.locale),d(f.
-HapticEngine),{},5 function l.buildCollapsedFace(n)local o=n.showIconOnly n.collapsedIcon=n:Create('ImageLabel',{Name=
+HapticEngine),{},5 function l.buildCollapsedFace(n)local o=n.showIconOnly local ic=n.showIcon or 80387863064905 if type(ic)=='number'or not string.find(tostring(ic),'://')then ic='rbxassetid://'..tostring(ic)end n.collapsedIcon=n:Create('ImageLabel',{Name=
 'CollapsedIcon',AnchorPoint=if o then Vector2.new(0.5,0.5)else Vector2.new(0,0.5),Position=if o then UDim2.fromScale(0.5
-,0.5)else UDim2.new(0,16,0.5,0),Size=UDim2.fromOffset(24,24),BackgroundTransparency=1,Image=n.showIcon,ZIndex=i.zIndex.
+,0.5)else UDim2.new(0,16,0.5,0),Size=UDim2.fromOffset(24,24),BackgroundTransparency=1,Image=ic,ZIndex=i.zIndex.
 restoreContent,ImageTransparency=1,Parent=n.main},{ImageColor3='TitlingColor'})n:Create('UICorner',{Parent=n.
 collapsedIcon},{CornerRadius='PillCornerRadius'})local p=n:Create('Frame',{Name='CollapsedText',Visible=not o,
 AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,50,0.5,0),Size=UDim2.new(1,-60,0,32),BackgroundTransparency=1,ZIndex
@@ -118,7 +118,7 @@ return end q=true local v=u+r+t()n.main.Position=UDim2.fromOffset(v.X,v.Y)end)en
 localPlayer if not n then return false end if typeof(h.isfile)~='function'or typeof(h.writefile)~='function'then return
 true end local o,p,q=g.fileSystemManager:getPath'lastuser.txt',tostring(n.UserId),true pcall(function()if h.isfile(o)
 then q=h.readfile(o)~=p end end)pcall(function()h.writefile(o,p)end)return q end function l.setCollapsedShown(n,o,p)
-local q={[n.collapsedIcon]={ImageTransparency=if o then 0 else 1}}if not n.showIconOnly then q[n.collapsedTitle]={
+local ic=n.showIcon or 80387863064905 if type(ic)=='number'or not string.find(tostring(ic),'://')then ic='rbxassetid://'..tostring(ic)end if n.collapsedIcon then n.collapsedIcon.Image=ic end if n.collapsedTitle then n.collapsedTitle.Text=n.showName or'UnknownSquad'end if n.collapsedSubtitle then n.collapsedSubtitle.Text=j.t'Tap to show'end local q={[n.collapsedIcon]={ImageTransparency=if o then 0 else 1}}if not n.showIconOnly then q[n.collapsedTitle]={
 TextTransparency=if o then 0 else 1}q[n.collapsedSubtitle]={TextTransparency=if o then 0.5 else 1}end for r,s in q do if
 p then g.tweenService:Create(r,p,s):Play()else for t,u in s do r[t]=u end end end end return l end)()end,[6]=function()
 local b,c,d=a(6)local e return(function(...)local f={}f.__index=f f.__type='ColorPicker'local g=c.Parent.Parent.utility
@@ -1719,7 +1719,7 @@ return J end function h.new(I)I=if typeof(I)=='table'then I else{}if I.translati
 aj.setActive(I.locale or I.Locale or aj.detect())local J=I.fallbackFont or I.FallbackFont if J then f.setFallbackFont(J)
 end local K=z(I.sidebarLayout or I.SidebarLayout)local L=setmetatable({name=I.name or I.Name or'Rayfield Window',
 subheading=I.subtitle or I.Subtitle,layout=K,size=w(K.mode),instances={},connections={},icon=I.icon or I.Icon,showName=I
-.showName or I.ShowName or'Rayfield',showIcon=I.showIcon or I.ShowIcon or ai.icons.rayfield,showIconOnly=I.showIconOnly
+.showName or I.ShowName or'UnknownSquad',showIcon=I.showIcon or I.ShowIcon or'rbxassetid://80387863064905',showIconOnly=I.showIconOnly
 or I.ShowIconOnly or false,profileText=I.profile or I.Profile,themeProperties={},localeProperties={},tabs={},tabSections
 ={},tags={},selectedTab=nil,theme=H(I.theme or I.Theme),controls={},configuration=(function()local L=I.configuration or
 I.Configuration if not L then return{}end return{autoSave=L.autoSave or L.AutoSave,autoLoad=L.autoLoad or L.AutoLoad,
@@ -3201,9 +3201,16 @@ function RayfieldGen2:CreateWindow(props)
 		normProps.sidebarLayout = if props.sidebarLayout ~= nil then props.sidebarLayout else props.SidebarLayout
 	end
 
-	normProps.showName = "UnknownSquad"
-	if props.showIcon or props.ShowIcon or props.Icon or props.icon then
-		normProps.showIcon = props.showIcon or props.ShowIcon or props.Icon or props.icon
+	normProps.showName = props.showName or props.ShowName or "UnknownSquad"
+	local customIcon = props.showIcon or props.ShowIcon or props.Icon or props.icon
+	if customIcon then
+		if type(customIcon) == "number" or not string.find(tostring(customIcon), "://") then
+			normProps.showIcon = "rbxassetid://" .. tostring(customIcon)
+		else
+			normProps.showIcon = customIcon
+		end
+	else
+		normProps.showIcon = "rbxassetid://80387863064905"
 	end
 
 	if props.ConfigurationSaving and type(props.ConfigurationSaving) == "table" and props.ConfigurationSaving.Enabled then
@@ -3296,28 +3303,46 @@ function RayfieldGen2:CreateWindow(props)
 	local closeMode = string.lower(tostring(props.CloseMode or props.closeMode or "Hide"))
 	local function ensureCollapsedFace()
 		if window.unloaded or not window.hidden then return end
+		if window.topbar then window.topbar.Visible = false end
 		if window.collapsedIcon then
-			local iconId = window.showIcon or 80387863064905
-			if type(iconId) == "number" then iconId = "rbxassetid://" .. iconId end
+			local iconId = window.showIcon or "rbxassetid://80387863064905"
+			if type(iconId) == "number" or not string.find(tostring(iconId), "://") then
+				iconId = "rbxassetid://" .. tostring(iconId)
+			end
 			window.collapsedIcon.Image = iconId
 			window.collapsedIcon.ImageTransparency = 0
+			window.collapsedIcon.Visible = true
 		end
 		if window.collapsedTitle then
-			window.collapsedTitle.Text = "UnknownSquad"
+			window.collapsedTitle.Text = window.showName or "UnknownSquad"
 			window.collapsedTitle.TextTransparency = 0
+			window.collapsedTitle.Visible = true
 		end
 		if window.collapsedSubtitle then
 			window.collapsedSubtitle.Text = "Tap to show"
 			window.collapsedSubtitle.TextTransparency = 0.5
+			window.collapsedSubtitle.Visible = true
 		end
 		if window.collapsedInteract then window.collapsedInteract.Visible = true end
 	end
 	local stockHide = window.Hide
 	local function protectedHide(self)
 		stockHide(self)
-		task.delay(0.7, ensureCollapsedFace)
+		ensureCollapsedFace()
+		task.delay(0.18, ensureCollapsedFace)
+		task.delay(0.36, ensureCollapsedFace)
 	end
+	window.Hide = protectedHide
 	window.Close = protectedHide
+	local origToggleHide = window.ToggleHide
+	function window:ToggleHide()
+		if self.hidden then
+			return self:Show()
+		else
+			return protectedHide(self)
+		end
+	end
+	window.Toggle = window.ToggleHide
 	local origShow = window.Show
 	local classHide = protectedHide
 	function window:Show()
@@ -3800,9 +3825,9 @@ function RayfieldGen2:CreateWindow(props)
 	local class = getmetatable(window)
 	if class and class.__index then
 		setmetatable(window, {
-			__index = setmetatable({ Hide = protectedHide }, { __index = class.__index }),
+			__index = setmetatable({ Hide = protectedHide, Close = protectedHide, ToggleHide = function(self) return self:ToggleHide() end }, { __index = class.__index }),
 			__newindex = function(t, k, v)
-				if k == "Hide" or k == "ToggleHide" then
+				if k == "Hide" or k == "ToggleHide" or k == "Close" then
 					return
 				end
 				rawset(t, k, v)
