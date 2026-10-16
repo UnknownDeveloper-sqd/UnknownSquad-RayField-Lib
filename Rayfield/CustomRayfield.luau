@@ -1853,8 +1853,7 @@ _watchViewport(I)local J,K:RBXScriptConnection?=false local function L()if J the
 CurrentCamera if N then K=I:Connect(N:GetPropertyChangedSignal'ViewportSize',L)end L()end I:Connect(f.workspace:
 GetPropertyChangedSignal'CurrentCamera',M)M()local N=0 I:Connect(f.runService.Heartbeat,function(O:number)N+=O if N<v
 then return end N=0 I:_applyWindowSize()end)end function h._bindKeybind(I)I:Connect(f.userInputService.InputBegan,
-function(J,K)if K or I._recordingKeybind then return end if J.KeyCode==I.settings.toggleKeybind or J.UserInputType==I.
-settings.toggleKeybind then I:ToggleHide()end end)end function h._bindMouseOverride(I)I._freeMouse=function()end end function h._bindTopbarDrag(I)local J,K,L,M=f.userInputService,false,Vector2.zero,Vector2.zero if
+function(J,K)if K or I._recordingKeybind then return end local T=I.settings.toggleKeybind if T==nil or T==Enum.KeyCode.Unknown then return end if J.KeyCode==T or J.UserInputType==T then I:ToggleHide()end end)end function h._bindMouseOverride(I)I._freeMouse=function()end end function h._bindTopbarDrag(I)local J,K,L,M=f.userInputService,false,Vector2.zero,Vector2.zero if
 I.screenGui and I.screenGui.IgnoreGuiInset then M=f.guiService:GetGuiInset()end local function N()local O=J:
 GetMouseLocation()+L+M local P,Q=O.X,O.Y if I.settings and I.settings.keepOnScreen then local R,S,T=I.main.AbsoluteSize,
 I.screenGui.AbsoluteSize,8 local U,V=R.X/2,R.Y/2 P=math.clamp(P,U+T,math.max(U+T,S.X-U-T))Q=math.clamp(Q,V+T,math.max(V+
