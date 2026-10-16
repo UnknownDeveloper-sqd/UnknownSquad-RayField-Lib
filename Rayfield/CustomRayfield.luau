@@ -3202,7 +3202,7 @@ function RayfieldGen2:CreateWindow(props)
 		normProps.sidebarLayout = if props.sidebarLayout ~= nil then props.sidebarLayout else props.SidebarLayout
 	end
 
-	normProps.showName = props.showName or props.ShowName or "UnknownSquad"
+	normProps.showName = "UnknownSquad"
 	if props.showIcon or props.ShowIcon or props.Icon or props.icon then
 		normProps.showIcon = props.showIcon or props.ShowIcon or props.Icon or props.icon
 	end
@@ -3451,6 +3451,28 @@ function RayfieldGen2:CreateWindow(props)
 		btn.Parent = window.screenGui
 		reopenPill = btn
 	end
+	local function ensureCollapsedFace()
+		if window.unloaded or not window.hidden then return end
+		if window.collapsedIcon then
+			window.collapsedIcon.Image = window.showIcon or "rbxassetid://80387863064905"
+			window.collapsedIcon.ImageTransparency = 0
+		end
+		if window.collapsedTitle then
+			window.collapsedTitle.Text = "UnknownSquad"
+			window.collapsedTitle.TextTransparency = 0
+		end
+		if window.collapsedSubtitle then
+			window.collapsedSubtitle.Text = "Tap to show"
+			window.collapsedSubtitle.TextTransparency = 0.5
+		end
+		if window.collapsedInteract then window.collapsedInteract.Visible = true end
+	end
+	local stockHide = window.Hide
+	function window:Hide()
+		stockHide(self)
+		task.delay(0.7, ensureCollapsedFace)
+	end
+	window.Close = window.Hide
 	local origShow = window.Show
 	local classHide = window.Hide -- kept so the X works even if a script overrides window.Hide
 	function window:Show()
