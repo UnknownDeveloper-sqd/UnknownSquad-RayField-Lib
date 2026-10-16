@@ -3314,13 +3314,13 @@ function RayfieldGen2:CreateWindow(props)
 		if window.collapsedInteract then window.collapsedInteract.Visible = true end
 	end
 	local stockHide = window.Hide
-	function window:Hide()
+	local function protectedHide(self)
 		stockHide(self)
 		task.delay(0.7, ensureCollapsedFace)
 	end
-	window.Close = window.Hide
+	window.Close = protectedHide
 	local origShow = window.Show
-	local classHide = window.Hide -- kept so the X works even if a script overrides window.Hide
+	local classHide = protectedHide
 	function window:Show()
 		if self.main then self.main.Visible = true end
 		return origShow(self)
@@ -3801,10 +3801,9 @@ function RayfieldGen2:CreateWindow(props)
 	local class = getmetatable(window)
 	if class and class.__index then
 		setmetatable(window, {
-			__index = class.__index,
+			__index = setmetatable({ Hide = protectedHide }, { __index = class.__index }),
 			__newindex = function(t, k, v)
 				if k == "Hide" or k == "ToggleHide" then
-					warn("Rayfield: window." .. k .. " cannot be overridden (it drives the close button and reopen pill).")
 					return
 				end
 				rawset(t, k, v)
