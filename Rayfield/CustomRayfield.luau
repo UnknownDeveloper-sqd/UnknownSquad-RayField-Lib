@@ -3468,19 +3468,6 @@ function RayfieldGen2:CreateWindow(props)
 			end
 			if not window.hidden then pcall(classHide, window) end
 			if closeMode ~= "invisible" then
-				task.delay(0.9, function()
-					if window.unloaded or not window.hidden then return end
-					local stockAlive = window.main and window.main.Visible and window.main.Parent ~= nil
-						and window.collapsedInteract and window.collapsedInteract.Parent ~= nil
-						and window.main.AbsoluteSize.X > 20
-					if stockAlive then
-						window.collapsedInteract.Visible = true
-						return
-					end
-					if window.collapsedInteract then window.collapsedInteract.Visible = false end
-					if window.main then window.main.Visible = false end
-					createReopenPill()
-				end)
 				return
 			end
 			task.delay(0.5, function()
