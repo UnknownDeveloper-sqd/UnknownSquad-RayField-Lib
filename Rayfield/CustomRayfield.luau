@@ -111,7 +111,7 @@ then return g.guiService:GetGuiInset()end return Vector2.zero end local function
 localPlayer if not n then return false end if typeof(h.isfile)~='function'or typeof(h.writefile)~='function'then return
 true end local o,p,q=g.fileSystemManager:getPath'lastuser.txt',tostring(n.UserId),true pcall(function()if h.isfile(o)
 then q=h.readfile(o)~=p end end)pcall(function()h.writefile(o,p)end)return q end function l.setCollapsedShown(n,o,p)
-local ic=n.showIcon or 80387863064905 if type(ic)=='number'or not string.find(tostring(ic),'://')then ic='rbxassetid://'..tostring(ic)end if n.collapsedIcon then n.collapsedIcon.Image=ic end if n.collapsedTitle then n.collapsedTitle.Text=n.showName or'UnknownSquad'end if n.collapsedSubtitle then n.collapsedSubtitle.Text=j.t'Tap to show'end local q={[n.collapsedIcon]={ImageTransparency=if o then 0 else 1}}if not n.showIconOnly then q[n.collapsedTitle]={
+local ic=n.showIcon or 80387863064905 if type(ic)=='number'or not string.find(tostring(ic),'://')then ic='rbxassetid://'..tostring(ic)end if n.collapsedIcon then n.collapsedIcon.Image=ic end if n.collapsedTitle then n.collapsedTitle.Text=n.showName or'UnknownSquad'end if n.collapsedSubtitle then n.collapsedSubtitle.Text='Tap to show'end local q={[n.collapsedIcon]={ImageTransparency=if o then 0 else 1}}if not n.showIconOnly then q[n.collapsedTitle]={
 TextTransparency=if o then 0 else 1}q[n.collapsedSubtitle]={TextTransparency=if o then 0.5 else 1}end for r,s in q do if
 p then g.tweenService:Create(r,p,s):Play()else for t,u in s do r[t]=u end end end end return l end)()end,[6]=function()
 local b,c,d=a(6)local e return(function(...)local f={}f.__index=f f.__type='ColorPicker'local g=c.Parent.Parent.utility
